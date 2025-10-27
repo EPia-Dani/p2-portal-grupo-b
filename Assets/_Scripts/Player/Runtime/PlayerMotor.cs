@@ -20,7 +20,7 @@ namespace _Scripts.Player.Runtime
         private bool _grounded;
 
         public Vector3 Velocity => _cc.velocity;
-        public float NormalizedSpeed => new Vector2(_cc.velocity.x, _cc.velocity.z).magnitude / config.runSpeed;
+        public Vector2 MovementDirection => new (_cc.velocity.x, _cc.velocity.z);
         public bool IsGrounded => _grounded;
 
         void Awake()
@@ -73,6 +73,7 @@ namespace _Scripts.Player.Runtime
                 if(audioSource.isPlaying)
                     audioSource.Stop();
                 audioSource?.PlayOneShot(config.jumpClip);
+                animator.SetTrigger("Jump");
             }
         }
 
@@ -118,8 +119,9 @@ namespace _Scripts.Player.Runtime
         }
 
         public void LateTick()
-        {
-            animator?.SetFloat("Speed",NormalizedSpeed);
+        {   
+            animator.SetFloat("MovementX", MovementDirection.x);
+            animator?.SetFloat("MovementZ",MovementDirection.y);
             _cc.height = _crouching ? config.crouchHeight : config.walkHeight;
         }
 
