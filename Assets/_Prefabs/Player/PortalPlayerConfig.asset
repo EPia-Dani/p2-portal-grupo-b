@@ -24,5 +24,5 @@ MonoBehaviour:
   jumpClip: {fileID: 0}
   walkHeight: 2
   crouchHeight: 1.5
-  minPitch: -45
-  maxPitch: 45
+  minPitch: -89
+  maxPitch: 89

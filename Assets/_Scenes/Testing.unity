@@ -119,6 +119,164 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1001 &130271816
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_ResetSeedOnPlay
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_InitialEventNameOverriden
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[0].m_Name
+      value: Torus_torus_majorRadius
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[1].m_Name
+      value: Scale
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[0].m_Value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[1].m_Value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.data[0].m_Name
+      value: Torus_torus_transform_scale
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[0].m_Overridden
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Float.m_Array.Array.data[1].m_Overridden
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.data[0].m_Value.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.data[0].m_Value.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.data[0].m_Value.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2142204712393004138, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_PropertySheet.m_Vector3f.m_Array.Array.data[0].m_Overridden
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.480428
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3345611
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -14
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4036411707354972384, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4470548958963010254, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: rend
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4470548958963010254, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: planarCam
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4470548958963010254, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: transitionDuration
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7625603049227067052, guid: 6d0467094e720f049ba9894e4d8b7ba4,
+        type: 3}
+      propertyPath: m_Name
+      value: BluePortalVFX
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6d0467094e720f049ba9894e4d8b7ba4, type: 3}
 --- !u!1 &627358874
 GameObject:
   m_ObjectHideFlags: 0
@@ -238,3 +396,4 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 627358877}
+  - {fileID: 130271816}
