@@ -190,7 +190,39 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1386540769815856080}
+  - {fileID: 3699528013954564300}
   m_Father: {fileID: 8894403569471178587}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2065160025233516998
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3699528013954564300}
+  m_Layer: 0
+  m_Name: HoldPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3699528013954564300
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2065160025233516998}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2006752696085543464}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5825087367098169672
 GameObject:
@@ -342,6 +374,7 @@ GameObject:
   - component: {fileID: 6021209049181232305}
   - component: {fileID: 6316621621166368282}
   - component: {fileID: 6197915303254044651}
+  - component: {fileID: 1067667375865340516}
   m_Layer: 0
   m_Name: CharacterRig
   m_TagString: Player
@@ -590,6 +623,21 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 1af33a65bf56f734d86b396ba15d5877, type: 2}
   audioSource: {fileID: 6678462468209192722}
   animator: {fileID: 2011260031401041751}
+--- !u!114 &1067667375865340516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6689633196677941504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9baf5c50cd0e57244a052d33bb1ae642, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grabRange: 5
+  playerCamera: {fileID: 376243741540011110}
+  holdPoint: {fileID: 3699528013954564300}
 --- !u!1001 &5292707049723487882
 PrefabInstance:
   m_ObjectHideFlags: 0
