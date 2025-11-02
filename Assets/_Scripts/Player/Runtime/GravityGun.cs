@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class GravityGun : MonoBehaviour
 {
@@ -10,29 +11,50 @@ public class GravityGun : MonoBehaviour
     
     public Transform HoldPoint => holdPoint;
 
-    void Update()
+    public void OnInteract(InputAction.CallbackContext context)
     {
-        if (Input.GetMouseButtonDown(0))
+        if (context.started)
         {
             if (grabbedObject == null)
             {
-                Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-                if (Physics.Raycast(ray, out RaycastHit hitInfo, grabRange))
-                {
-                    IGrabbable grabbable = hitInfo.collider.GetComponent<IGrabbable>();
-                    if (grabbable != null)
-                    {
-                        grabbedObject = grabbable;
-                        grabbedObject?.OnGrab(this);
-                    }
-                }
+                TryPickup();
+            }
+            else
+            {
+                grabbedObject?.OnRelease();
+                grabbedObject = null;
             }
         }
-
-        if (Input.GetMouseButtonDown(1))
+    }
+    
+    public void OnAttack(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            Shoot();
+        }
+    }
+    
+    private void Shoot()
+    {
+        if (grabbedObject != null)
         {
             grabbedObject?.OnRelease();
             grabbedObject = null;
+        }
+    }
+    
+    private void TryPickup()
+    {
+        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        if (Physics.Raycast(ray, out RaycastHit hitInfo, grabRange))
+        {
+            IGrabbable grabbable = hitInfo.collider.GetComponent<IGrabbable>();
+            if (grabbable != null)
+            {
+                grabbedObject = grabbable;
+                grabbedObject?.OnGrab(this);
+            }
         }
     }
 

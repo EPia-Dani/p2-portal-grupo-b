@@ -1,7 +1,7 @@
 // csharp
 using UnityEngine;
 
-public class CompanionCube : MonoBehaviour, IGrabbable
+public class GrabbableBase : MonoBehaviour, IGrabbable
 {
     [Header("Follow (spring)")]
     [SerializeField] float springStrength = 40f;    // higher = snappier pull
@@ -81,6 +81,20 @@ public class CompanionCube : MonoBehaviour, IGrabbable
 
         // apply the last tracked velocities so it carries momentum
         rb.linearVelocity = storedVel;
+        rb.angularVelocity = storedAngVel;
+    }
+
+    public void OnThrow(GravityGun gravityGun)
+    {
+        if (gravityGun == null)
+            return;
+        
+        Vector3 throwDir = gravityGun.HoldPoint.forward.normalized;
+        float throwSpeed = 15f;
+        
+        OnRelease();
+        
+        rb.linearVelocity = storedVel + throwDir * throwSpeed;
         rb.angularVelocity = storedAngVel;
     }
 
