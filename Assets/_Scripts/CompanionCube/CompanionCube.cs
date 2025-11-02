@@ -1,15 +1,26 @@
+// csharp
 using UnityEngine;
 
 public class CompanionCube : MonoBehaviour, IGrabbable
 {
+    [Header("Follow (spring)")]
+    [SerializeField] float springStrength = 40f;    // higher = snappier pull
+    [SerializeField] float springDamping = 8f;      // higher = less oscillation
+    [SerializeField] float maxFollowSpeed = 20f;    // clamp speed
+
+    [Header("Rotation (angular spring)")]
+    [SerializeField] float rotationStrength = 40f;  // angular stiffness
+    [SerializeField] float rotationDamping = 6f;    // angular damping
+    [SerializeField] float maxAngularSpeed = 40f;   // clamp angular speed (rad/s)
+
     [Header("Follow")]
-    [SerializeField] float positionLerp = 0.25f;   // 0..1 of gap per tick
-    [SerializeField] float rotationLerp = 0.25f;
     [SerializeField] float maxFollowDistance = 1f;
+    [Tooltip("When colliding and beyond the leash, only release if linear speed is below this threshold.")]
+    [SerializeField] float releaseSpeedThreshold = 0.5f; // meters per second
 
     [Header("Collision")]
-    [SerializeField] float surfacePadding = 0.02f; // small skin to avoid interpenetration
-    [SerializeField] LayerMask blockMask = ~0;     // adjust to ignore player layer if needed
+    [SerializeField] float surfacePadding = 0.02f;
+    [SerializeField] LayerMask blockMask = ~0;
 
     Rigidbody rb;
     Transform followTarget;
@@ -19,9 +30,12 @@ public class CompanionCube : MonoBehaviour, IGrabbable
     RigidbodyInterpolation cachedInterp;
 
     GravityGun holdingGun;
-    
+
     Vector3 storedVel;
     Vector3 storedAngVel;
+
+    // collision tracking: when > 0 the object is colliding
+    int collisionCount = 0;
 
     void Awake()
     {
@@ -45,8 +59,11 @@ public class CompanionCube : MonoBehaviour, IGrabbable
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
+        // stop immediate motion
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+        storedVel = Vector3.zero;
+        storedAngVel = Vector3.zero;
     }
 
     public void OnRelease()
@@ -62,7 +79,7 @@ public class CompanionCube : MonoBehaviour, IGrabbable
         rb.collisionDetectionMode = cachedCD;
         rb.interpolation = cachedInterp;
 
-        // continue with last follow momentum
+        // apply the last tracked velocities so it carries momentum
         rb.linearVelocity = storedVel;
         rb.angularVelocity = storedAngVel;
     }
@@ -71,45 +88,118 @@ public class CompanionCube : MonoBehaviour, IGrabbable
     {
         if (!isGrabbed || followTarget == null) return;
 
-        // hard release if the leash breaks
+        float dt = Time.fixedDeltaTime;
+
+        // leash check: if colliding, max follow distance = maxFollowDistance, otherwise infinite
         float leash = Vector3.Distance(rb.position, followTarget.position);
-        if (leash > maxFollowDistance) { OnRelease(); return; }
-
-        // compute desired step this tick
-        Vector3 goalPos = Vector3.Lerp(rb.position, followTarget.position, positionLerp);
-        Vector3 step = goalPos - rb.position;
-
-        if (step.sqrMagnitude > 1e-8f)
+        float currentMaxFollow = (collisionCount > 0) ? maxFollowDistance : Mathf.Infinity;
+        if (leash > currentMaxFollow)
         {
-            Vector3 dir = step.normalized;
-            float dist = step.magnitude;
-            
-            if (Physics.Raycast(rb.position, dir, out RaycastHit hit, dist, blockMask, QueryTriggerInteraction.Ignore))
+            if (collisionCount > 0)
             {
-                Vector3 hitPos = hit.point - dir * surfacePadding;
-                Vector3 move = hitPos - rb.position;
-
-                storedVel = move / Time.fixedDeltaTime;
-                rb.MovePosition(hitPos);
+                // Only release if the object is not sliding/moving (speed below threshold)
+                if (rb.linearVelocity.magnitude <= releaseSpeedThreshold)
+                {
+                    OnRelease();
+                    return;
+                }
+                // else: still colliding and moving -> keep holding despite leash exceeded
             }
             else
             {
-                storedVel = step / Time.fixedDeltaTime;
-                rb.MovePosition(goalPos);
+                // not colliding and beyond leash (shouldn't happen because currentMaxFollow is Infinity),
+                // but keep the original behavior safe.
+                OnRelease();
+                return;
             }
-
         }
 
-        // rotate toward target; approximate angular velocity for release
-        Quaternion nextRot = Quaternion.Slerp(rb.rotation, followTarget.rotation, rotationLerp);
-        Quaternion delta = nextRot * Quaternion.Inverse(rb.rotation);
-        delta.ToAngleAxis(out float angleDeg, out Vector3 axis);
-        if (!float.IsNaN(axis.x))
+        // spring force for translation: compute desired acceleration-like velocity change
+        Vector3 toTarget = followTarget.position - rb.position;
+        float dist = toTarget.magnitude;
+
+        // desired velocity from spring (proportional to displacement)
+        Vector3 desiredVel = toTarget * springStrength;
+        // damping proportional to current velocity
+        Vector3 dampingVel = -rb.linearVelocity * springDamping;
+        // integrate velocity
+        Vector3 nextVel = rb.linearVelocity + (desiredVel + dampingVel) * dt;
+
+        // clamp speed
+        if (nextVel.sqrMagnitude > maxFollowSpeed * maxFollowSpeed)
+            nextVel = nextVel.normalized * maxFollowSpeed;
+
+        // compute intended move for this tick
+        Vector3 move = nextVel * dt;
+        if (move.sqrMagnitude > 1e-8f)
         {
-            float angleRad = angleDeg * Mathf.Deg2Rad;
-            storedAngVel = axis.normalized * (angleRad / Time.fixedDeltaTime);
+            Vector3 dir = move.normalized;
+            float moveDist = move.magnitude;
+
+            if (Physics.Raycast(rb.position, dir, out RaycastHit hit, moveDist, blockMask, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 hitPos = hit.point - dir * surfacePadding;
+                storedVel = (hitPos - rb.position) / dt;
+                rb.MovePosition(hitPos);
+                // zero out nextVel to avoid pushing into obstacle next frame
+                nextVel = Vector3.zero;
+            }
+            else
+            {
+                storedVel = move / dt;
+                rb.MovePosition(rb.position + move);
+            }
+        }
+        else
+        {
+            // tiny motion; still set storedVel
+            storedVel = Vector3.zero;
         }
 
-        rb.MoveRotation(nextRot);
+        // write back velocity tracking to the rigidbody if needed (keep physics consistent)
+        rb.linearVelocity = nextVel;
+
+        // angular spring: compute target angular velocity needed to rotate toward followTarget
+        Quaternion deltaQ = followTarget.rotation * Quaternion.Inverse(rb.rotation);
+        deltaQ.ToAngleAxis(out float angleDeg, out Vector3 axis);
+        if (float.IsNaN(axis.x) || axis.sqrMagnitude < 1e-8f)
+        {
+            // no significant rotation needed
+            storedAngVel = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        else
+        {
+            float angleRad = Mathf.Deg2Rad * Mathf.Repeat(angleDeg + 180f, 360f) - Mathf.PI; // signed shortest angle
+            Vector3 axisNorm = axis.normalized;
+            // desired angular velocity (proportional to angle)
+            Vector3 desiredAngVel = axisNorm * (angleRad * rotationStrength);
+            // damping
+            Vector3 angDamping = -rb.angularVelocity * rotationDamping;
+            Vector3 nextAngVel = rb.angularVelocity + (desiredAngVel + angDamping) * dt;
+
+            // clamp
+            if (nextAngVel.sqrMagnitude > maxAngularSpeed * maxAngularSpeed)
+                nextAngVel = nextAngVel.normalized * maxAngularSpeed;
+
+            // integrate rotation directly to keep in sync
+            Quaternion step = Quaternion.Euler(Mathf.Rad2Deg * dt * nextAngVel);
+            Quaternion nextRot = step * rb.rotation;
+
+            // collision-safe rotation is less straightforward; just apply rotation
+            storedAngVel = nextAngVel;
+            rb.MoveRotation(nextRot);
+            rb.angularVelocity = nextAngVel;
+        }
+    }
+
+    void OnCollisionEnter(Collision other)
+    {
+        collisionCount++;
+    }
+
+    void OnCollisionExit(Collision other)
+    {
+        collisionCount = Mathf.Max(0, collisionCount - 1);
     }
 }
