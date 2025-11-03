@@ -83,5 +83,23 @@ namespace _Scripts.Player.Runtime
             // Adjust recoilPitch so that the applied pitch stays within clamp
             _recoilPitch = clampedPitch - _pitch;
         }
+        
+        public void ResetToCurrentForward()
+        {
+            _yaw = transform.eulerAngles.y;                 // re-sync yaw
+            _pitch = pitchController.localEulerAngles.x;    // re-sync pitch
+            _recoilPitch = 0f;                              // clear recoil
+            _recoilYaw = 0f;
+            Apply();
+        }
+        // En PlayerLook
+        public void SetYawPitchAbsolute(float yawDeg, float pitchDeg)
+        {
+            _yaw = yawDeg;
+            _pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
+            _recoilPitch = 0f;
+            _recoilYaw = 0f;
+            Apply();
+        }
     }
 }
