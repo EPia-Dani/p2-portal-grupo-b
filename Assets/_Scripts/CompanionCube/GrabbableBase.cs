@@ -1,4 +1,6 @@
 // csharp
+
+using _Scripts.Interfaces;
 using UnityEngine;
 
 public class GrabbableBase : MonoBehaviour, IGrabbable
@@ -21,6 +23,7 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     [Header("Collision")]
     [SerializeField] float surfacePadding = 0.02f;
     [SerializeField] LayerMask blockMask = ~0;
+    [SerializeField] float minSpeed = 1f, damagePerKg = 2f;
 
     Rigidbody rb;
     Transform followTarget;
@@ -206,14 +209,13 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
             rb.angularVelocity = nextAngVel;
         }
     }
-
-    void OnCollisionEnter(Collision other)
-    {
-        collisionCount++;
+    
+    void OnCollisionEnter(Collision c){
+        Debug.Log("Collision Enter");
+        if (rb.linearVelocity.magnitude < minSpeed) return;
+        var dmg = damagePerKg * rb.mass * rb.linearVelocity.magnitude;
+        dmg = Mathf.FloorToInt(dmg);
+        c.collider.GetComponentInParent<IDamageable>()?.ApplyDamage(dmg, c.GetContact(0).point, c.GetContact(0).normal);
     }
-
-    void OnCollisionExit(Collision other)
-    {
-        collisionCount = Mathf.Max(0, collisionCount - 1);
-    }
+    
 }

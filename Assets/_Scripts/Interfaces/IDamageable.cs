@@ -4,8 +4,6 @@ namespace _Scripts.Interfaces
 {
     public interface IDamageable
     {
-        static Action OnHitTaken;
-        void ApplyDamage(int amount);
+        void ApplyDamage(float dmg, Vector3 hitPoint, Vector3 hitNormal);
     }
-
 }
