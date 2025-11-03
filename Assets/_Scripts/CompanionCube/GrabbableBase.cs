@@ -90,7 +90,7 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
             return;
         
         Vector3 throwDir = gravityGun.HoldPoint.forward.normalized;
-        float throwSpeed = 15f;
+        float throwSpeed = 5f;
         
         OnRelease();
         

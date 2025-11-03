@@ -27,11 +27,20 @@ public class GravityGun : MonoBehaviour
         }
     }
     
-    public void OnAttack(InputAction.CallbackContext context)
+    public void OnPrimary(InputAction.CallbackContext context)
     {
         if (context.started)
         {
             Shoot();
+        }
+    }
+
+    public void OnSecondary(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            grabbedObject?.OnRelease();
+            grabbedObject = null;
         }
     }
     
@@ -39,7 +48,7 @@ public class GravityGun : MonoBehaviour
     {
         if (grabbedObject != null)
         {
-            grabbedObject?.OnRelease();
+            grabbedObject?.OnThrow(this);
             grabbedObject = null;
         }
     }

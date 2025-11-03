@@ -26,6 +26,7 @@ namespace _Scripts.Player.Runtime
         void Awake()
         {
             _cc = GetComponent<CharacterController>();
+            _cc.detectCollisions = true;
         }
 
         void Update()
