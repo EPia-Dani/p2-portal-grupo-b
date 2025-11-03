@@ -22,7 +22,7 @@ MonoBehaviour:
   footstepAClip: {fileID: 0}
   footstepBClip: {fileID: 0}
   jumpClip: {fileID: 0}
-  walkHeight: 2
-  crouchHeight: 1.5
-  minPitch: -45
-  maxPitch: 45
+  walkHeight: 1.8
+  crouchHeight: 1
+  minPitch: -89
+  maxPitch: 89
