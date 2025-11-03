@@ -9,6 +9,8 @@ public class Portal : MonoBehaviour
     [SerializeField] private Renderer outlineRenderer;
     [field: SerializeField] public Color PortalColour { get; private set; }
     
+    [SerializeField] private Renderer screenRenderer; 
+    
     [SerializeField] private LayerMask placementMask;
     
     [SerializeField] private Transform testTransform;
@@ -27,13 +29,15 @@ public class Portal : MonoBehaviour
     public bool IsPlaced { get; private set; } = false;
     private Collider _wallCollider;
 
-    public Renderer Renderer { get; private set; }
+    private Renderer _fallbackRenderer;              
+    public Renderer Renderer => screenRenderer != null ? screenRenderer : _fallbackRenderer;
     private new BoxCollider _collider;
 
     private void Awake()
     {
         _collider = GetComponent<BoxCollider>();
-        Renderer = GetComponent<Renderer>();
+        _collider.isTrigger = true;                 
+        _fallbackRenderer = GetComponent<Renderer>();
     }
 
     private void Start()
@@ -42,16 +46,16 @@ public class Portal : MonoBehaviour
         {
             outlineRenderer.material.SetColor("_OutlineColour", PortalColour);
         }
+        if (Renderer != null)
+            Renderer.enabled = false;
         gameObject.SetActive(false);
     }
 
     private void Update()
     {
-        // CHANGED: null-guard OtherPortal
-        Renderer.enabled = (OtherPortal != null && OtherPortal.IsPlaced);
-        // SOLO PARA PROBAR
-        Renderer.enabled = true;
-        // Legacy rigidbody-based travellers
+        if (Renderer != null)
+            Renderer.enabled = (OtherPortal != null && OtherPortal.IsPlaced);
+
         for (int i = 0; i < _portalObjects.Count; ++i)
         {
             var t = _portalObjects[i].transform;
