@@ -26,8 +26,7 @@ public class PortalableCharacter : MonoBehaviour
 
     public void ExitPortal(Collider wallCollider)
     {
-        if (wallCollider != null && TryGetComponent<Collider>(out var c))
-            Physics.IgnoreCollision(c, wallCollider, false);
+
 
         _inPortal = null;
         _outPortal = null;
@@ -37,6 +36,7 @@ public class PortalableCharacter : MonoBehaviour
 
     public void Warp()
     {
+        Debug.Log("[PortalableCharacter] WARP ejecutado");
         if (_inPortal == null || _outPortal == null || motor == null) return;
 
         // --- Posición (usa PlayerMotor.TeleportTo para gestionar CharacterController) ---
@@ -46,6 +46,10 @@ public class PortalableCharacter : MonoBehaviour
         Vector3 relativePos = inT.InverseTransformPoint(transform.position);
         relativePos = HalfTurn * relativePos;
         Vector3 newWorldPos = outT.TransformPoint(relativePos);
+        
+        
+        newWorldPos += outT.forward * 0.01f;   
+
 
         motor.TeleportTo(newWorldPos); // ya desactiva/activa el CharacterController
 
@@ -72,6 +76,7 @@ public class PortalableCharacter : MonoBehaviour
             look.SetYawPitchAbsolute(transform.eulerAngles.y, pitchBefore);
         }
 
+        
         // swap de portales (igual que en PortalableObject)
         var tmp = _inPortal;
         _inPortal = _outPortal;
@@ -83,6 +88,7 @@ public class PortalableCharacter : MonoBehaviour
     {
         if (head == null) head = Camera.main ? Camera.main.transform : transform;
         Vector3 local = portal.transform.InverseTransformPoint(head.position);
+        Debug.Log($"[PortalableCharacter] local.z={local.z}");
         return local.z > 0f;
     }
 }

@@ -86,7 +86,10 @@ namespace _Scripts.Player.Runtime
         
         public void ResetToCurrentForward()
         {
-            _yaw = transform.eulerAngles.y;                 // re-sync yaw
+            _yaw = transform.eulerAngles.y;   
+            float px = pitchController.localEulerAngles.x;
+            if (px > 180f) px -= 360f;                // ← normaliza
+            _pitch = Mathf.Clamp(px, config.minPitch, config.maxPitch);
             _pitch = pitchController.localEulerAngles.x;    // re-sync pitch
             _recoilPitch = 0f;                              // clear recoil
             _recoilYaw = 0f;
@@ -96,7 +99,8 @@ namespace _Scripts.Player.Runtime
         public void SetYawPitchAbsolute(float yawDeg, float pitchDeg)
         {
             _yaw = yawDeg;
-            _pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
+            if (pitchDeg > 180f) pitchDeg -= 360f;    // ← normaliza
+            //_pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
             _recoilPitch = 0f;
             _recoilYaw = 0f;
             Apply();

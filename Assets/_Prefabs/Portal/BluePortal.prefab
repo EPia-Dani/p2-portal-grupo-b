@@ -42,7 +42,7 @@ Camera:
   m_GameObject: {fileID: 714649133855668519}
   m_Enabled: 0
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -187,7 +187,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.1192894, y: 1.2069082, z: -13.96463}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.3367888, y: 1.7809066, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2365845947136488076}
@@ -235,8 +235,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1.9657025, z: 0.28404617}
-  m_Center: {x: 0, y: -0.10781193, z: -0.08381653}
+  m_Size: {x: 1, y: 1.9999994, z: 0.8675812}
+  m_Center: {x: 0, y: 0, z: -0.13379058}
 --- !u!1 &6135045354793131178
 GameObject:
   m_ObjectHideFlags: 0
@@ -264,7 +264,7 @@ Transform:
   m_GameObject: {fileID: 6135045354793131178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0216, y: -0.0371, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0.01}
   m_LocalScale: {x: 1.386558, y: 2.063482, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

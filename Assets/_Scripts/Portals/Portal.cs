@@ -16,6 +16,7 @@ public class Portal : MonoBehaviour
     [SerializeField] private Transform testTransform;
     
     
+    
 
     // CHANGED: keep legacy list for rigidbody-based objects
     private readonly List<PortalableObject> _portalObjects = new List<PortalableObject>();
@@ -53,66 +54,90 @@ public class Portal : MonoBehaviour
 
     private void Update()
     {
-        if (Renderer != null)
-            Renderer.enabled = (OtherPortal != null && OtherPortal.IsPlaced);
+        // Mostrar/ocultar la pantalla del portal en función del estado del otro portal
+        bool visible = (OtherPortal != null && OtherPortal.IsPlaced);
+        if (Renderer != null) Renderer.enabled = visible;
 
+        // DEBUG: estado de visibilidad (no spamea si no cambia)
+        Debug.Log($"[Portal:{name}] Visible={visible} (OtherPortal={(OtherPortal ? OtherPortal.name : "null")})");
+
+        // Objetos con Rigidbody
         for (int i = 0; i < _portalObjects.Count; ++i)
         {
             var t = _portalObjects[i].transform;
             Vector3 objPos = transform.InverseTransformPoint(t.position);
             if (objPos.z > 0.0f)
             {
+                Debug.Log($"[Portal:{name}] Warp() PortalableObject -> {_portalObjects[i].name}");
                 _portalObjects[i].Warp();
             }
         }
 
-        // CHANGED: CharacterController-based player travellers
+        // Player basado en CharacterController (PortalablePlayer)
         for (int i = 0; i < _portalablePlayers.Count; ++i)
         {
             var t = _portalablePlayers[i].transform;
             Vector3 objPos = transform.InverseTransformPoint(t.position);
             if (objPos.z > 0.0f)
             {
+                Debug.Log($"[Portal:{name}] Warp() PortalablePlayer -> {_portalablePlayers[i].name}");
                 _portalablePlayers[i].Warp();
             }
         }
-        
+
+        // CharacterController con cabeza/pivot (PortalableCharacter)
         for (int i = 0; i < _portalChars.Count; ++i)
         {
-            if (_portalChars[i] != null && _portalChars[i].HasCrossedPlane(this))
-                _portalChars[i].Warp();
+            var chr = _portalChars[i];
+            if (chr != null && chr.HasCrossedPlane(this))
+            {
+                Debug.Log($"[Portal:{name}] HasCrossedPlane -> Warp() {chr.name}");
+                chr.Warp();
+            }
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // First, try rigidbody-based object
+        Debug.Log($"[Portal:{name}] OnTriggerEnter con {other.name} (layer={LayerMask.LayerToName(other.gameObject.layer)})");
+
+        // 1) Objetos con Rigidbody
         var obj = other.GetComponent<PortalableObject>();
         if (obj != null)
         {
             if (!_portalObjects.Contains(obj)) _portalObjects.Add(obj);
             obj.SetIsInPortal(this, OtherPortal, _wallCollider);
+            Debug.Log($"[Portal:{name}] Registrado PortalableObject: {obj.name} (count={_portalObjects.Count})");
             return;
         }
 
-        // CHANGED: also support player with CharacterController via PortalablePlayer
+        // 2) Player basado en CharacterController (root)
         var player = other.GetComponentInParent<PortalablePlayer>();
         if (player != null)
         {
             if (!_portalablePlayers.Contains(player)) _portalablePlayers.Add(player);
             player.SetIsInPortal(this, OtherPortal, _wallCollider);
+            Debug.Log($"[Portal:{name}] Registrado PortalablePlayer: {player.name} (count={_portalablePlayers.Count})");
+            return;
         }
-        
+
+        // 3) CharacterController con cabeza/pivot (normalmente en el mismo GO del player)
         var chr = other.GetComponent<PortalableCharacter>();
         if (chr != null)
         {
-            _portalChars.Add(chr);
+            if (!_portalChars.Contains(chr)) _portalChars.Add(chr);
             chr.SetIsInPortal(this, OtherPortal, _wallCollider);
+            Debug.Log($"[Portal:{name}] Registrado PortalableCharacter: {chr.name} (count={_portalChars.Count})");
+            return;
         }
-    }
 
+        // Si llega aquí, es un collider que no nos interesa
+         Debug.Log($"[Portal:{name}] TriggerEnter ignorado para {other.name}");
+    }
     private void OnTriggerExit(Collider other)
     {
+        Debug.Log($"[Portal:{name}] OnTriggerExit con {other.name}");
+
         var obj = other.GetComponent<PortalableObject>();
         if (obj != null)
         {
@@ -120,11 +145,11 @@ public class Portal : MonoBehaviour
             {
                 _portalObjects.Remove(obj);
                 obj.ExitPortal(_wallCollider);
+                Debug.Log($"[Portal:{name}] Unregistered PortalableObject: {obj.name} (count={_portalObjects.Count})");
             }
             return;
         }
 
-        // CHANGED: player exit handling
         var player = other.GetComponentInParent<PortalablePlayer>();
         if (player != null)
         {
@@ -132,28 +157,38 @@ public class Portal : MonoBehaviour
             {
                 _portalablePlayers.Remove(player);
                 player.ExitPortal(_wallCollider);
+                Debug.Log($"[Portal:{name}] Unregistered PortalablePlayer: {player.name} (count={_portalablePlayers.Count})");
             }
+            return;
         }
-        
-        
+
         var chr = other.GetComponent<PortalableCharacter>();
         if (chr != null && _portalChars.Contains(chr))
         {
             _portalChars.Remove(chr);
             chr.ExitPortal(_wallCollider);
+            Debug.Log($"[Portal:{name}] Unregistered PortalableCharacter: {chr.name} (count={_portalChars.Count})");
+            return;
         }
-    }
 
+        // Debug opcional si quieres ver salidas “no relevantes”
+        // Debug.Log($"[Portal:{name}] TriggerExit ignorado para {other.name}");
+    }
     public bool PlacePortal(Collider wallCollider, Vector3 pos, Quaternion rot)
     {
+        // Pre-posicionado de prueba
         testTransform.position = pos;
         testTransform.rotation = rot;
         testTransform.position -= testTransform.forward * 0.001f;
 
+        // Ajustes de borde/intersecciones
         FixOverhangs();
         FixIntersects();
 
-        if (CheckOverlap())
+        bool ok = CheckOverlap();
+        Debug.Log($"[Portal:{name}] PlacePortal en {pos} rot={rot.eulerAngles} -> {(ok ? "OK" : "FALLO (overlap/intersección/borde)")}");
+
+        if (ok)
         {
             this._wallCollider = wallCollider;
             transform.position = testTransform.position;
@@ -161,6 +196,11 @@ public class Portal : MonoBehaviour
 
             gameObject.SetActive(true);
             IsPlaced = true;
+
+            // Forzar que la pantalla solo se vea si el otro está colocado
+            if (Renderer != null)
+                Renderer.enabled = (OtherPortal != null && OtherPortal.IsPlaced);
+
             return true;
         }
 
