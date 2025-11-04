@@ -17,34 +17,25 @@ public class PortalPlacement : MonoBehaviour
         if (lookTransform == null) lookTransform = transform;
     }
 
-    // ===== Legacy Input (solo si tienes Active Input Handling = Both) =====
-    private void Update()
-    {
-        if (Input.GetButtonDown("Fire1"))
-        {
-            if (debugLogs) Debug.Log("[PortalPlacement] Legacy Fire1");
-            FirePortal(0, lookTransform.position, lookTransform.forward, 250f);
-        }
-        else if (Input.GetButtonDown("Fire2"))
-        {
-            if (debugLogs) Debug.Log("[PortalPlacement] Legacy Fire2");
-            FirePortal(1, lookTransform.position, lookTransform.forward, 250f);
-        }
-    }
-
     // ===== New Input System (PlayerInput → Invoke Unity Events) =====
     public void OnFireBlue(InputAction.CallbackContext ctx)
     {
-        if (!ctx.started) return;
-        if (debugLogs) Debug.Log($"[PortalPlacement] FireBlue started. pos={lookTransform.position} dir={lookTransform.forward}");
-        FirePortal(0, lookTransform.position, lookTransform.forward, 250f);
+        if (ctx.started)
+        {
+            if (debugLogs) Debug.Log($"[PortalPlacement] FireBlue started. pos={lookTransform.position} dir={lookTransform.forward}");
+            FirePortal(0, lookTransform.position, lookTransform.forward, 250f);
+        }
+        
+
     }
 
     public void OnFireOrange(InputAction.CallbackContext ctx)
     {
-        if (!ctx.started) return;
-        if (debugLogs) Debug.Log($"[PortalPlacement] FireOrange started. pos={lookTransform.position} dir={lookTransform.forward}");
-        FirePortal(1, lookTransform.position, lookTransform.forward, 250f);
+        if (ctx.started)
+        {
+            if (debugLogs) Debug.Log($"[PortalPlacement] FireOrange started. pos={lookTransform.position} dir={lookTransform.forward}");
+            FirePortal(1, lookTransform.position, lookTransform.forward, 250f);            
+        }
     }
 
     private void FirePortal(int portalID, Vector3 pos, Vector3 dir, float distance)
@@ -82,9 +73,7 @@ public class PortalPlacement : MonoBehaviour
             // Orientación del portal
             var cameraRotation = lookTransform.rotation;
             var portalRight = cameraRotation * Vector3.right;
-            portalRight = (Mathf.Abs(portalRight.x) >= Mathf.Abs(portalRight.z))
-                ? (portalRight.x >= 0 ? Vector3.right : -Vector3.right)
-                : (portalRight.z >= 0 ? Vector3.forward : -Vector3.forward);
+            // portalRight = (Mathf.Abs(portalRight.x) >= Mathf.Abs(portalRight.z))? (portalRight.x >= 0 ? Vector3.right : -Vector3.right): (portalRight.z >= 0 ? Vector3.forward : -Vector3.forward);
 
             var portalForward = -hit.normal;
             var portalUp = -Vector3.Cross(portalRight, portalForward);

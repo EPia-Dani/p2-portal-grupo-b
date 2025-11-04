@@ -19,6 +19,8 @@ namespace _Scripts.Player.Runtime
         private bool _crouching;
         private bool _grounded;
 
+        [SerializeField] private float externalFriction = 5f; 
+        private Vector3 _externalVelocity;       
         public Vector3 Velocity => _cc.velocity;
         public Vector2 MovementDirection => new (_cc.velocity.x, _cc.velocity.z);
         public bool IsGrounded => _grounded;
@@ -88,28 +90,31 @@ namespace _Scripts.Player.Runtime
             // look-aligned ground motion
             Vector3 wish = new Vector3(_moveInput.x, 0f, _moveInput.y);
             Vector3 worldWish = transform.TransformDirection(wish);
-
             float speed = _crouching ? config.crouchSpeed : _running && _canRun ? config.runSpeed : config.walkSpeed;
 
             // gravity
             float g = Physics.gravity.y;
             _verticalVel += g * dt;
 
-            Vector3 displacement = new Vector3(worldWish.x * speed * dt,
-                                               _verticalVel * dt,
-                                               worldWish.z * speed * dt);
+            Vector3 totalVel = new Vector3(worldWish.x * speed, _verticalVel, worldWish.z * speed) + _externalVelocity;
+            Vector3 displacement = totalVel * dt;
 
             CollisionFlags flags = _cc.Move(displacement);
 
             if ((flags & CollisionFlags.Below) != 0)
             {
                 _grounded = true;
-                if (_verticalVel < 0f) _verticalVel = -2f; // stick to ground
+                if (_verticalVel < 0f) _verticalVel = -2f;
+                if (_externalVelocity.y < 0f) _externalVelocity.y = 0f; // don't push into ground
             }
-            else
-            {
-                _grounded = false;
-            }
+            else _grounded = false;
+
+            if ((flags & CollisionFlags.Above) != 0 && _externalVelocity.y > 0f)
+                _externalVelocity.y = 0f; // clear upward push if we hit a ceiling
+
+            // decay injected momentum
+            if (_externalVelocity != Vector3.zero)
+                _externalVelocity = Vector3.MoveTowards(_externalVelocity, Vector3.zero, externalFriction * dt);
         }
         
         public void TeleportTo(Vector3 position)
@@ -126,6 +131,9 @@ namespace _Scripts.Player.Runtime
             _cc.height = _crouching ? config.crouchHeight : config.walkHeight;
         }
 
+        public void InjectExternalVelocity(Vector3 worldVel) => _externalVelocity = worldVel;
+        public void SetVerticalVelocity(float v) => _verticalVel = v;
+        
         private bool _playA;
         public void PlayFootstepSound()
         {

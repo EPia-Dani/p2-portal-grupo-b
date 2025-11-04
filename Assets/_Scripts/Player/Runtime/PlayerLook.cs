@@ -96,11 +96,11 @@ namespace _Scripts.Player.Runtime
             Apply();
         }
         // En PlayerLook
-        public void SetYawPitchAbsolute(float yawDeg, float pitchDeg)
+        public void AddYawPitchAbsolute(float yawDeg, float pitchDeg)
         {
-            _yaw = yawDeg;
-            if (pitchDeg > 180f) pitchDeg -= 360f;    // ← normaliza
-            //_pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
+            _yaw   += yawDeg;
+            _pitch += pitchDeg;
+            _pitch = Mathf.Clamp(_pitch, config.minPitch, config.maxPitch);
             _recoilPitch = 0f;
             _recoilYaw = 0f;
             Apply();

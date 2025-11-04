@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
@@ -29,7 +30,11 @@ public class Portal : MonoBehaviour
 
     public bool IsPlaced { get; private set; } = false;
     private Collider _wallCollider;
-
+    public Collider WallCollider => _wallCollider;
+    
+    [SerializeField] private GameObject portalCollider;
+    public GameObject PortalCollider => portalCollider;
+    
     private Renderer _fallbackRenderer;              
     public Renderer Renderer => screenRenderer != null ? screenRenderer : _fallbackRenderer;
     private new BoxCollider _collider;
@@ -73,23 +78,11 @@ public class Portal : MonoBehaviour
             }
         }
 
-        // Player basado en CharacterController (PortalablePlayer)
-        for (int i = 0; i < _portalablePlayers.Count; ++i)
-        {
-            var t = _portalablePlayers[i].transform;
-            Vector3 objPos = transform.InverseTransformPoint(t.position);
-            if (objPos.z > 0.0f)
-            {
-                Debug.Log($"[Portal:{name}] Warp() PortalablePlayer -> {_portalablePlayers[i].name}");
-                _portalablePlayers[i].Warp();
-            }
-        }
-
         // CharacterController con cabeza/pivot (PortalableCharacter)
         for (int i = 0; i < _portalChars.Count; ++i)
         {
             var chr = _portalChars[i];
-            if (chr != null && chr.HasCrossedPlane(this))
+            if (chr != null && chr.HasCrossedPlane(this) && OtherPortal != null)
             {
                 Debug.Log($"[Portal:{name}] HasCrossedPlane -> Warp() {chr.name}");
                 chr.Warp();
@@ -126,7 +119,7 @@ public class Portal : MonoBehaviour
         if (chr != null)
         {
             if (!_portalChars.Contains(chr)) _portalChars.Add(chr);
-            chr.SetIsInPortal(this, OtherPortal, _wallCollider);
+            chr.SetIsInPortal(this, OtherPortal);
             Debug.Log($"[Portal:{name}] Registrado PortalableCharacter: {chr.name} (count={_portalChars.Count})");
             return;
         }
@@ -166,9 +159,8 @@ public class Portal : MonoBehaviour
         if (chr != null && _portalChars.Contains(chr))
         {
             _portalChars.Remove(chr);
-            chr.ExitPortal(_wallCollider);
+            chr.ExitPortal();
             Debug.Log($"[Portal:{name}] Unregistered PortalableCharacter: {chr.name} (count={_portalChars.Count})");
-            return;
         }
 
         // Debug opcional si quieres ver salidas “no relevantes”
