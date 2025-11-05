@@ -63,6 +63,7 @@ namespace _Scripts.Player.Runtime
         {
             _yaw = yawDeg;
             _pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
+            Apply();
         }
     }
 }

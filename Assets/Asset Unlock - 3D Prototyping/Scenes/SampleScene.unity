@@ -4711,11 +4711,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: PortalPair
       objectReference: {fileID: 0}
-    - target: {fileID: 4349437784983453984, guid: 0a60535011f6a1e46b3f9130343ef4f7,
-        type: 3}
-      propertyPath: m_ClearFlags
-      value: 4
-      objectReference: {fileID: 0}
     - target: {fileID: 6472848782087386672, guid: 0a60535011f6a1e46b3f9130343ef4f7,
         type: 3}
       propertyPath: m_LocalPosition.x
