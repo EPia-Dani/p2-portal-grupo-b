@@ -26,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 271496594965205452}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -1.491, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -154,7 +154,7 @@ Transform:
   m_GameObject: {fileID: 1452372303025218660}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalPosition: {x: 0, y: 0.008999944, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -347,7 +347,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   portalCamera: {fileID: 0}
-  iterations: 7
+  iterations: 2
 --- !u!1 &6689633196677941504
 GameObject:
   m_ObjectHideFlags: 0
@@ -365,7 +365,7 @@ GameObject:
   - component: {fileID: 1905288434513168615}
   - component: {fileID: 4922871141645490996}
   - component: {fileID: 3479803256049097758}
-  - component: {fileID: 3277975984284438506}
+  - component: {fileID: 7277893087268637799}
   m_Layer: 7
   m_Name: CharacterRig
   m_TagString: Player
@@ -636,8 +636,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pitchController: {fileID: 2006752696085543464}
   config: {fileID: 11400000, guid: 1af33a65bf56f734d86b396ba15d5877, type: 2}
-  recoilRecoverySpeed: 8
-  recoilYawRandom: 0.5
 --- !u!143 &6316621621166368282
 CharacterController:
   m_ObjectHideFlags: 0
@@ -662,7 +660,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.005
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.9, z: 0}
+  m_Center: {x: 0, y: -0.6, z: 0}
 --- !u!114 &6197915303254044651
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -741,33 +739,27 @@ MonoBehaviour:
   motor: {fileID: 6197915303254044651}
   look: {fileID: 6021209049181232305}
   head: {fileID: 1386540769815856080}
---- !u!54 &3277975984284438506
-Rigidbody:
+--- !u!65 &7277893087268637799
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6689633196677941504}
-  serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 1
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 0.18, z: 1}
+  m_Center: {x: 0, y: -1.5, z: 0}
 --- !u!1001 &5292707049723487882
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -799,7 +791,7 @@ PrefabInstance:
     - target: {fileID: 3119862507923306965, guid: 34993209cc13e475999759793043db60,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -1.491
       objectReference: {fileID: 0}
     - target: {fileID: 3119862507923306965, guid: 34993209cc13e475999759793043db60,
         type: 3}

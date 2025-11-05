@@ -66,9 +66,12 @@ public class PortalableCharacter : MonoBehaviour
         if (_inPortal == null || _outPortal == null || motor == null) return;
 
         // --- Posición (usa PlayerMotor.TeleportTo para gestionar CharacterController) ---
-        var inT  = _inPortal.transform;
-        var outT = _outPortal.transform;
+        Transform inT  = _inPortal.transform;
+        Transform outT = _outPortal.transform;
 
+        Quaternion deltaRot       = outT.rotation * HalfTurn * Quaternion.Inverse(inT.rotation);
+        Quaternion targetHeadRot  = deltaRot * head.rotation;
+        
         Vector3 relativePos = inT.InverseTransformPoint(transform.position);
         relativePos = HalfTurn * relativePos;
         Vector3 newWorldPos = outT.TransformPoint(relativePos);
@@ -78,27 +81,20 @@ public class PortalableCharacter : MonoBehaviour
 
 
         motor.TeleportTo(newWorldPos); // ya desactiva/activa el CharacterController
+        
+        if (look != null && head != null)
+        {
+            // Decompose world rotation to yaw (around world up) and pitch
+            static void ToYawPitch(Quaternion rot, out float yawDeg, out float pitchDeg)
+            {
+                Vector3 f = rot * Vector3.forward;
+                Vector3 xz = new Vector3(f.x, 0f, f.z);
+                yawDeg   = xz.sqrMagnitude > 1e-6f ? Mathf.Atan2(xz.x, xz.z) * Mathf.Rad2Deg : 0f;
+                pitchDeg = Mathf.Asin(Mathf.Clamp(f.y, -1f, 1f)) * Mathf.Rad2Deg;
+            }
 
-        // cámara (pitch): conservar inclinación relativa
-        if (look != null)
-        { 
-            var inDir = -_inPortal.transform.forward;
-            var outDir = _outPortal.transform.forward;
-            
-            Vector2 inXZ  = new Vector2(inDir.x,  inDir.z);
-            Vector2 outXZ = new Vector2(outDir.x, outDir.z);
-
-            float yawIn  = inXZ.sqrMagnitude > 1e-6f  ? Mathf.Atan2(inXZ.x,  inXZ.y)  * Mathf.Rad2Deg : 0f;
-            float yawOut = outXZ.sqrMagnitude > 1e-6f ? Mathf.Atan2(outXZ.x, outXZ.y) * Mathf.Rad2Deg : 0f;
-            float yawDelta = Mathf.DeltaAngle(yawIn, yawOut);
-
-            // pitch from asin(y), clamped to [-1,1]
-            float pitchIn  = Mathf.Asin(Mathf.Clamp(inDir.y,  -1f, 1f)) * Mathf.Rad2Deg;
-            float pitchOut = Mathf.Asin(Mathf.Clamp(outDir.y, -1f, 1f)) * Mathf.Rad2Deg;
-            float pitchDelta = pitchOut - pitchIn;
-            
-            if (float.IsFinite(yawDelta) && float.IsFinite(pitchDelta))
-                look.AddYawPitchAbsolute(yawDelta, pitchDelta);
+            ToYawPitch(targetHeadRot, out float yawAbs, out float pitchAbs);
+            look.SetYawPitchAbsolute(yawAbs, -pitchAbs);
         }
         
         Vector3 inVel = motor.Velocity;
@@ -107,10 +103,9 @@ public class PortalableCharacter : MonoBehaviour
         relVel = HalfTurn * relVel;
         Vector3 outVel = outT.TransformDirection(relVel);
         
-        float upAlign = Vector3.Dot(outT.forward.normalized, Vector3.up); // 0=horizontal, 1=straight up
+        float upAlign = Vector3.Dot(outT.forward.normalized, Vector3.up);
         if (upAlign > 0.15f)
         {
-            // scale boost with both the incline and entry speed
             float speedMag = inVel.magnitude;
             float boost = Mathf.Lerp(2f, 8f, upAlign) + 0.25f * speedMag;
             outVel += outT.forward * boost;

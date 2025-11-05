@@ -17,12 +17,6 @@ namespace _Scripts.Player.Runtime
         
         private bool _isDead = false;
         
-        // Recoil (procedural)
-        private float _recoilPitch = 0f;
-        private float _recoilYaw = 0f;
-        [SerializeField] private float recoilRecoverySpeed = 8f; // degrees per second recovered
-        [SerializeField] private float recoilYawRandom = 0.5f;   // max yaw jitter per shot
-        
         private void Awake()
         {
             _yaw = transform.eulerAngles.y;
@@ -33,16 +27,6 @@ namespace _Scripts.Player.Runtime
         void Update()
         {
             if (_isDead) return;
-            // smooth recoil recovery
-            if (_recoilPitch != 0f)
-            {
-                _recoilPitch = Mathf.MoveTowards(_recoilPitch, 0f, recoilRecoverySpeed * Time.deltaTime);
-            }
-            if (_recoilYaw != 0f)
-            {
-                _recoilYaw = Mathf.MoveTowards(_recoilYaw, 0f, recoilRecoverySpeed * Time.deltaTime);
-            }
-
             Apply();
         }
         
@@ -62,26 +46,8 @@ namespace _Scripts.Player.Runtime
         
         public void Apply()
         {
-            // Apply procedural recoil as additive offsets to current look
-            transform.rotation            = Quaternion.Euler(0f, _yaw + _recoilYaw, 0f);
-            pitchController.localRotation = Quaternion.Euler(_pitch + _recoilPitch, 0f, 0f);
-        }
-        
-        public void SetSensitivityMultiplier(float mul)
-        {
-            _sensMultiplier = mul;
-        }
-        
-        public void ApplyRecoil(float recoil)
-        {
-            // Add recoil as an instantaneous kick; yaw gets a small random horizontal component
-            _recoilPitch -= recoil;
-            _recoilYaw += UnityEngine.Random.Range(-recoilYawRandom, recoilYawRandom);
-
-            // Clamp pitch so recoil doesn't push beyond limits
-            float clampedPitch = Mathf.Clamp(_pitch + _recoilPitch, config.minPitch, config.maxPitch);
-            // Adjust recoilPitch so that the applied pitch stays within clamp
-            _recoilPitch = clampedPitch - _pitch;
+            transform.rotation            = Quaternion.Euler(0f, _yaw, 0f);
+            pitchController.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
         }
         
         public void ResetToCurrentForward()
@@ -91,19 +57,12 @@ namespace _Scripts.Player.Runtime
             if (px > 180f) px -= 360f;                // ← normaliza
             _pitch = Mathf.Clamp(px, config.minPitch, config.maxPitch);
             _pitch = pitchController.localEulerAngles.x;    // re-sync pitch
-            _recoilPitch = 0f;                              // clear recoil
-            _recoilYaw = 0f;
-            Apply();
         }
         // En PlayerLook
-        public void AddYawPitchAbsolute(float yawDeg, float pitchDeg)
+        public void SetYawPitchAbsolute(float yawDeg, float pitchDeg)
         {
-            _yaw   += yawDeg;
-            _pitch += pitchDeg;
-            _pitch = Mathf.Clamp(_pitch, config.minPitch, config.maxPitch);
-            _recoilPitch = 0f;
-            _recoilYaw = 0f;
-            Apply();
+            _yaw = yawDeg;
+            _pitch = Mathf.Clamp(pitchDeg, config.minPitch, config.maxPitch);
         }
     }
 }

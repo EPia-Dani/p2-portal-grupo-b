@@ -37,7 +37,7 @@ public class Portal : MonoBehaviour
     
     private Renderer _fallbackRenderer;              
     public Renderer Renderer => screenRenderer != null ? screenRenderer : _fallbackRenderer;
-    private new BoxCollider _collider;
+    private BoxCollider _collider;
 
     private void Awake()
     {

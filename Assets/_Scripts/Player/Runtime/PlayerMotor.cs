@@ -100,6 +100,12 @@ namespace _Scripts.Player.Runtime
             Vector3 displacement = totalVel * dt;
 
             CollisionFlags flags = _cc.Move(displacement);
+            
+            if ((flags & CollisionFlags.Sides) != 0)
+            {
+                _externalVelocity.x = 0f;
+                _externalVelocity.z = 0f;
+            }
 
             if ((flags & CollisionFlags.Below) != 0)
             {
