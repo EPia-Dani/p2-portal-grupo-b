@@ -99,7 +99,7 @@ public class Portal : MonoBehaviour
         if (obj != null)
         {
             if (!_portalObjects.Contains(obj)) _portalObjects.Add(obj);
-            obj.SetIsInPortal(this, OtherPortal, _wallCollider);
+            obj.SetIsInPortal(this, OtherPortal);
             Debug.Log($"[Portal:{name}] Registrado PortalableObject: {obj.name} (count={_portalObjects.Count})");
             return;
         }
@@ -137,7 +137,7 @@ public class Portal : MonoBehaviour
             if (_portalObjects.Contains(obj))
             {
                 _portalObjects.Remove(obj);
-                obj.ExitPortal(_wallCollider);
+                obj.ExitPortal();
                 Debug.Log($"[Portal:{name}] Unregistered PortalableObject: {obj.name} (count={_portalObjects.Count})");
             }
             return;
