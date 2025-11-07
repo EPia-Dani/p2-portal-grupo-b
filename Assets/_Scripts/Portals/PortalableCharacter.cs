@@ -104,11 +104,11 @@ public class PortalableCharacter : MonoBehaviour
         Vector3 outVel = outT.TransformDirection(relVel);
         
         float upAlign = Vector3.Dot(outT.forward.normalized, Vector3.up);
-        if (upAlign > 0.15f)
+        if (upAlign > 0f)
         {
             float speedMag = inVel.magnitude;
             float boost = Mathf.Lerp(2f, 8f, upAlign) + 0.25f * speedMag;
-            outVel += outT.forward * boost;
+            outVel -= outT.forward * boost;
         }
         
         motor.SetVerticalVelocity(outVel.y);
@@ -123,7 +123,6 @@ public class PortalableCharacter : MonoBehaviour
     {
         if (head == null) head = Camera.main ? Camera.main.transform : transform;
         Vector3 local = portal.transform.InverseTransformPoint(head.position);
-        Debug.Log($"[PortalableCharacter] local.z={local.z}");
         return local.z > 0f;
     }
 }

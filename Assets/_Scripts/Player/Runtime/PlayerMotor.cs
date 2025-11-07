@@ -14,16 +14,19 @@ namespace _Scripts.Player.Runtime
         private CharacterController _cc;
         private Vector2 _moveInput;   // x: sides, y: forward
         private float _verticalVel;
+        private float MAX_FALL_SPEED = -20f;
         private bool _canRun = true;
         private bool _running;
         private bool _crouching;
         private bool _grounded;
 
-        [SerializeField] private float externalFriction = 5f; 
+        [SerializeField] private float externalFriction = 10f; 
         private Vector3 _externalVelocity;       
         public Vector3 Velocity => _cc.velocity;
         public Vector2 MovementDirection => new (_cc.velocity.x, _cc.velocity.z);
         public bool IsGrounded => _grounded;
+        
+        [SerializeField] private LayerMask groundMask = ~0;
 
         void Awake()
         {
@@ -95,6 +98,7 @@ namespace _Scripts.Player.Runtime
             // gravity
             float g = Physics.gravity.y;
             _verticalVel += g * dt;
+            _verticalVel = Mathf.Max(_verticalVel, MAX_FALL_SPEED);
 
             Vector3 totalVel = new Vector3(worldWish.x * speed, _verticalVel, worldWish.z * speed) + _externalVelocity;
             Vector3 displacement = totalVel * dt;
@@ -109,18 +113,42 @@ namespace _Scripts.Player.Runtime
 
             if ((flags & CollisionFlags.Below) != 0)
             {
-                _grounded = true;
-                if (_verticalVel < 0f) _verticalVel = -2f;
-                if (_externalVelocity.y < 0f) _externalVelocity.y = 0f; // don't push into ground
+                bool realGround = IsGroundedOnNonPortal();
+                if (realGround)
+                {
+                    _grounded = true;
+                    if (_verticalVel < 0f) _verticalVel = -2f;
+                    if (_externalVelocity.y < 0f) _externalVelocity.y = 0f; // don't push into ground
+                }
+                else
+                {
+                    _grounded = false;
+                }
             }
             else _grounded = false;
-
+            
             if ((flags & CollisionFlags.Above) != 0 && _externalVelocity.y > 0f)
-                _externalVelocity.y = 0f; // clear upward push if we hit a ceiling
+            {
+                _externalVelocity.y = 0f;
+                _verticalVel = 0f;
+            }
+
 
             // decay injected momentum
             if (_externalVelocity != Vector3.zero)
                 _externalVelocity = Vector3.MoveTowards(_externalVelocity, Vector3.zero, externalFriction * dt);
+        }
+        
+        private bool IsGroundedOnNonPortal()
+        {
+            Vector3 origin = transform.position + Vector3.up * 0.1f;
+            float dist = 2f;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, dist, groundMask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider.GetComponentInParent<Portal>() != null) return false;
+                return true;
+            }
+            return false;
         }
         
         public void TeleportTo(Vector3 position)

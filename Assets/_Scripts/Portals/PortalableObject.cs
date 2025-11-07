@@ -18,6 +18,9 @@ public class PortalableObject : MonoBehaviour
 
     private static readonly Quaternion HalfTurn = Quaternion.Euler(0f, 180f, 0f);
 
+    // Tope de caída consistente con PlayerMotor
+    private const float MAX_FALL_SPEED = -20f;
+
     protected virtual void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
@@ -55,7 +58,6 @@ public class PortalableObject : MonoBehaviour
                 {
                     mesh = mesh,
                     subMeshIndex = s,
-                    // convertir a espacio local del objeto raíz
                     transform = toLocal * mf.transform.localToWorldMatrix
                 };
                 combineList.Add(ci);
@@ -238,18 +240,22 @@ public class PortalableObject : MonoBehaviour
         relativeRot = HalfTurn * relativeRot;
         transform.rotation = outT.rotation * relativeRot;
 
-        // Velocidad
+        // Velocidad: usar velocity y aplicar tope vertical igual que PlayerMotor,
+        // además aplicar el mismo "boost" vertical que PortalableCharacter.
         Vector3 inVel = _rigidbody.linearVelocity;
+        inVel.y = Mathf.Max(inVel.y, MAX_FALL_SPEED);
+
         Vector3 relVel = inT.InverseTransformDirection(inVel);
         relVel = HalfTurn * relVel;
         Vector3 outVel = outT.TransformDirection(relVel);
 
         float upAlign = Vector3.Dot(outT.forward.normalized, Vector3.up);
-        if (upAlign > 0.15f)
+        if (upAlign > 0f)
         {
             float speedMag = inVel.magnitude;
             float boost = Mathf.Lerp(2f, 8f, upAlign) + 0.25f * speedMag;
-            outVel += outT.forward * boost;
+            // Coincide con PortalableCharacter: restar impulso en la dirección forward del portal de salida
+            outVel -= outT.forward * boost;
         }
 
         _rigidbody.linearVelocity = outVel;
