@@ -110,6 +110,9 @@ public class Portal : MonoBehaviour
                 chr.Warp();
             }
         }
+        
+        // Draw Ray for debugging
+        Debug.DrawRay(transform.position, transform.forward * 2.0f, Color.green);
     }
 
     private void OnTriggerEnter(Collider other)

@@ -1,128 +1,62 @@
-using System;
-using System.Collections.Generic;
+using _Scripts.Interfaces;
 using UnityEngine;
-using _Scripts.Player.Runtime; // PlayerMotor, PlayerLook
-
+using _Scripts.Player.Runtime;
+using _Scripts.Portals;
+    
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public class PortalableCharacter : MonoBehaviour
+public class PortalableCharacter : PortalableBase
 {
-    // refs
-    [SerializeField] private PlayerMotor motor;   // arrástralo (está en el root del player)
-    [SerializeField] private PlayerLook look;     // arrastra la MainCamera que tiene PlayerLook
-    [SerializeField] private Transform head;      // la cámara o el pivot de la cabeza (cruce plano)
+    [SerializeField] private PlayerMotor motor;
+    [SerializeField] private PlayerLook look;
+    [SerializeField] private Transform head;
 
-    private Collider _c;
+    Collider _c;
+    CharacterKinematics _kin;
     
-    private Portal _inPortal;
-    private Portal _outPortal;
+    protected override bool BaseAppliesRotation => false; 
 
-    private void Start()
+    protected void Awake()
     {
-        if (motor == null)
-            motor = GetComponent<PlayerMotor>();
-        if (look == null && Camera.main != null)
-            look = GetComponent<PlayerLook>();
-        if (head == null && Camera.main != null)
-            head = Camera.main.transform;
+        if (!motor) motor = GetComponent<PlayerMotor>();
+        if (!head && Camera.main) head = Camera.main.transform;
         _c = GetComponent<Collider>();
+        _kin = new CharacterKinematics(transform, motor, ApplyAbsoluteYawPitchFromQuaternion);
     }
 
-    // usado por Portal para saber si estamos dentro y para cruzar el plano
-    public void SetIsInPortal(Portal inPortal, Portal outPortal)
+    protected override IPortalKinematics Kin => _kin;
+    protected override Vector3 PlaneProbePosition => head ? head.position : transform.position;
+    protected override Collider GetMainCollider() => _c;
+
+    protected override void OnAfterWarp(Transform inT, Transform outT, Quaternion deltaRot)
     {
-        _inPortal = inPortal;
-        _outPortal = outPortal;
-        if (_inPortal.WallCollider != null)
-            Physics.IgnoreCollision(_c, _inPortal.WallCollider, true);
-        if (_outPortal.WallCollider != null)
-            Physics.IgnoreCollision(_c, _outPortal.WallCollider, true);
-        if(_inPortal.PortalCollider != null)
-            _inPortal.PortalCollider.SetActive(true);
-        if(_outPortal.PortalCollider != null)
-            _outPortal.PortalCollider.SetActive(true);
-    }
+        if (!look || !head) { ExitPortal(); return; }
 
-    public void ExitPortal()
-    {
-        if (_inPortal?.WallCollider != null)
-            Physics.IgnoreCollision(_c, _inPortal.WallCollider, false);
-        if (_outPortal?.WallCollider != null)
-            Physics.IgnoreCollision(_c, _outPortal.WallCollider, false);
-        if(_inPortal?.PortalCollider != null)
-            _inPortal.PortalCollider.SetActive(false);
-        if(_outPortal?.PortalCollider != null)
-            _outPortal.PortalCollider.SetActive(false);
-        _inPortal = null;
-        _outPortal = null;
+        // Guardar rotación local de la cabeza respecto al cuerpo antes del warp
+        Quaternion localHead = Quaternion.Inverse(transform.rotation) * head.rotation;
 
-    }
+        // Aplicar la rotación delta al cuerpo (mantiene la relación local cabeza->cuerpo)
+        transform.rotation = deltaRot * transform.rotation;
 
-    private static readonly Quaternion HalfTurn = Quaternion.Euler(0f, 180f, 0f);
+        // Reconstruir la rotación mundial de la cabeza tras rotar el cuerpo
+        Quaternion targetHeadWorld = transform.rotation * localHead;
 
-    public void Warp()
-    {
-        Debug.Log("[PortalableCharacter] WARP ejecutado");
-        if (_inPortal == null || _outPortal == null || motor == null) return;
+        Vector3 f = targetHeadWorld * Vector3.forward;
+        Vector3 xz = new Vector3(f.x, 0f, f.z);
+        float yawDeg   = xz.sqrMagnitude > 1e-8f ? Mathf.Atan2(xz.x, xz.z) * Mathf.Rad2Deg : transform.eulerAngles.y;
+        float pitchDeg = Mathf.Asin(Mathf.Clamp(f.y, -1f, 1f)) * Mathf.Rad2Deg;
 
-        // --- Posición (usa PlayerMotor.TeleportTo para gestionar CharacterController) ---
-        Transform inT  = _inPortal.transform;
-        Transform outT = _outPortal.transform;
+        look.SetYawPitchAbsolute(yawDeg, -pitchDeg);
 
-        Quaternion deltaRot       = outT.rotation * HalfTurn * Quaternion.Inverse(inT.rotation);
-        Quaternion targetHeadRot  = deltaRot * head.rotation;
-        
-        Vector3 relativePos = inT.InverseTransformPoint(transform.position);
-        relativePos = HalfTurn * relativePos;
-        Vector3 newWorldPos = outT.TransformPoint(relativePos);
-        
-        
-        newWorldPos += outT.forward * 0.01f;   
-
-
-        motor.TeleportTo(newWorldPos); // ya desactiva/activa el CharacterController
-        
-        if (look != null && head != null)
-        {
-            // Decompose world rotation to yaw (around world up) and pitch
-            static void ToYawPitch(Quaternion rot, out float yawDeg, out float pitchDeg)
-            {
-                Vector3 f = rot * Vector3.forward;
-                Vector3 xz = new Vector3(f.x, 0f, f.z);
-                yawDeg   = xz.sqrMagnitude > 1e-6f ? Mathf.Atan2(xz.x, xz.z) * Mathf.Rad2Deg : 0f;
-                pitchDeg = Mathf.Asin(Mathf.Clamp(f.y, -1f, 1f)) * Mathf.Rad2Deg;
-            }
-
-            ToYawPitch(targetHeadRot, out float yawAbs, out float pitchAbs);
-            look.SetYawPitchAbsolute(yawAbs, -pitchAbs);
-        }
-        
-        Vector3 inVel = motor.Velocity;
-        
-        Vector3 relVel = inT.InverseTransformDirection(inVel);
-        relVel = HalfTurn * relVel;
-        Vector3 outVel = outT.TransformDirection(relVel);
-        
-        float upAlign = Vector3.Dot(outT.forward.normalized, Vector3.up);
-        if (upAlign > 0f)
-        {
-            float speedMag = inVel.magnitude;
-            float boost = Mathf.Lerp(2f, 8f, upAlign) + 0.25f * speedMag;
-            outVel -= outT.forward * boost;
-        }
-        
-        motor.SetVerticalVelocity(outVel.y);
-        Vector3 horizontal = new Vector3(outVel.x, 0f, outVel.z);
-        motor.InjectExternalVelocity(horizontal);
-        
         ExitPortal();
     }
 
-    // Utilidad para que el Portal compruebe si hemos cruzado el plano
-    public bool HasCrossedPlane(Portal portal)
+
+
+
+    void ApplyAbsoluteYawPitchFromQuaternion(Quaternion q)
     {
-        if (head == null) head = Camera.main ? Camera.main.transform : transform;
-        Vector3 local = portal.transform.InverseTransformPoint(head.position);
-        return local.z > 0f;
+        // Delegate to PlayerLook if you prefer, otherwise set transform.rotation.
+        transform.rotation = q;
     }
 }
