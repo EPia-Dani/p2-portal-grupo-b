@@ -8,6 +8,9 @@ public class PortalPlacement : MonoBehaviour
     [SerializeField] private LayerMask layerMask;
     [SerializeField] private Crosshair crosshair;
     [SerializeField] private Transform lookTransform;
+    
+    [Header("Preview")]
+    [SerializeField] private PortalPreview portalPreview;
 
     [Header("Debug")]
     [SerializeField] private bool debugLogs = true;
@@ -15,6 +18,14 @@ public class PortalPlacement : MonoBehaviour
     private void Awake()
     {
         if (lookTransform == null) lookTransform = transform;
+        if (portalPreview == null) portalPreview = GetComponent<PortalPreview>(); 
+
+    }
+    
+    private void LateUpdate()
+    {
+        if (portalPreview == null) return;
+        portalPreview.Tick(lookTransform.position, lookTransform.forward, layerMask);
     }
 
     // ===== New Input System (PlayerInput → Invoke Unity Events) =====
@@ -39,38 +50,38 @@ public class PortalPlacement : MonoBehaviour
     }
 
     private void FirePortal(int portalID, Vector3 pos, Vector3 dir, float distance)
+{
+    // Dibuja el rayo 2s en la Scene
+    Debug.DrawRay(pos, dir * distance, Color.cyan, 2f);
+
+    if (Physics.Raycast(pos, dir, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore))
     {
-        // Dibuja el rayo 2s en la Scene
-        Debug.DrawRay(pos, dir * distance, Color.cyan, 2f);
+        if (debugLogs)
+            Debug.Log($"[PortalPlacement] HIT {hit.collider.name} (layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}) @ {hit.point}");
 
-        if (Physics.Raycast(pos, dir, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore))
+        // --- Disparo a través de portal: DESACTIVADO temporalmente ---
+        // if (hit.collider.CompareTag("Portal"))
+        // {
+        //     if (debugLogs) Debug.Log("[PortalPlacement] Portal hit: through-shot disabled temporarily.");
+        //     return;
+        // }
+
+        bool wasPlaced = false;
+
+        // 1) Colocación via PREVIEW (misma superficie)
+        if (portalPreview != null && portalPreview.IsValid && portalPreview.Surface == hit.collider)
         {
-            if (debugLogs)
-                Debug.Log($"[PortalPlacement] HIT {hit.collider.name} (layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}) @ {hit.point}");
+            wasPlaced = portals.Portals[portalID].PlacePortal(
+                portalPreview.Surface,
+                portalPreview.HitPoint,
+                portalPreview.PreviewRotation
+            );
+            if (debugLogs) Debug.Log($"[PortalPlacement] PlacePortal(id={portalID}) via PREVIEW => {wasPlaced}");
+        }
 
-            // Disparo a través de portal
-            if (hit.collider.CompareTag("Portal"))
-            {
-                var inPortal = hit.collider.GetComponent<Portal>();
-                if (inPortal == null) { if (debugLogs) Debug.LogWarning("[PortalPlacement] Tag Portal sin componente Portal."); return; }
-                var outPortal = inPortal.OtherPortal;
-                if (outPortal == null) { if (debugLogs) Debug.LogWarning("[PortalPlacement] OtherPortal es null."); return; }
-
-                Vector3 relativePos = inPortal.transform.InverseTransformPoint(hit.point + dir);
-                relativePos = Quaternion.Euler(0f, 180f, 0f) * relativePos;
-                pos = outPortal.transform.TransformPoint(relativePos);
-
-                Vector3 relativeDir = inPortal.transform.InverseTransformDirection(dir);
-                relativeDir = Quaternion.Euler(0f, 180f, 0f) * relativeDir;
-                dir = outPortal.transform.TransformDirection(relativeDir);
-
-                distance -= Vector3.Distance(pos, hit.point);
-                if (debugLogs) Debug.Log($"[PortalPlacement] Re-shoot through portal. newPos={pos}, newDir={dir}, newDist={distance}");
-                FirePortal(portalID, pos, dir, distance);
-                return;
-            }
-
-            // Orientación del portal
+        // 2) Fallback: orientación original si no hay preview válido
+        if (!wasPlaced)
+        {
             var cameraRotation = lookTransform.rotation;
             var portalRight = cameraRotation * Vector3.right;
             // portalRight = (Mathf.Abs(portalRight.x) >= Mathf.Abs(portalRight.z))? (portalRight.x >= 0 ? Vector3.right : -Vector3.right): (portalRight.z >= 0 ? Vector3.forward : -Vector3.forward);
@@ -79,14 +90,16 @@ public class PortalPlacement : MonoBehaviour
             var portalUp = -Vector3.Cross(portalRight, portalForward);
             var portalRotation = Quaternion.LookRotation(portalForward, portalUp);
 
-            bool wasPlaced = portals.Portals[portalID].PlacePortal(hit.collider, hit.point, portalRotation);
-            if (debugLogs) Debug.Log($"[PortalPlacement] PlacePortal(id={portalID}) => {wasPlaced}");
-            if (wasPlaced && crosshair != null) crosshair.SetPortalPlaced(portalID, true);
-            if (!wasPlaced && debugLogs) Debug.LogWarning("[PortalPlacement] Rechazado por overlap/intersección/borde.");
+            wasPlaced = portals.Portals[portalID].PlacePortal(hit.collider, hit.point, portalRotation);
+            if (debugLogs) Debug.Log($"[PortalPlacement] PlacePortal(id={portalID}) via FALLBACK => {wasPlaced}");
         }
-        else
-        {
-            if (debugLogs) Debug.Log("[PortalPlacement] MISS (no golpeó nada de la LayerMask).");
-        }
+
+        if (wasPlaced && crosshair != null) crosshair.SetPortalPlaced(portalID, true);
+        if (!wasPlaced && debugLogs) Debug.LogWarning("[PortalPlacement] Rechazado por overlap/intersección/borde.");
     }
+    else
+    {
+        if (debugLogs) Debug.Log("[PortalPlacement] MISS (no golpeó nada de la LayerMask).");
+    }
+}
 }
