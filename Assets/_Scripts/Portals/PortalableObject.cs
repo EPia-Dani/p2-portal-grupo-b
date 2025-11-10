@@ -88,8 +88,7 @@ public class PortalableObject : MonoBehaviour
                 materials.Add(s < mats.Length ? mats[s] : (mats.Length > 0 ? mats[0] : null));
             }
         }
-
-        // Si no hay nada para combinar, intentar copiar un mesh simple (manteniendo espacios relativos)
+        
         if (combineList.Count == 0)
         {
             var singleMf = GetComponentInChildren<MeshFilter>();
@@ -152,8 +151,7 @@ public class PortalableObject : MonoBehaviour
             _cloneObject.SetActive(false);
         }
     }
-
-    // Actualiza la posición/rotación del clon según la relación entre portals
+    
     private void UpdateCloneTransform()
     {
         if (_inPortal == null || _outPortal == null || _cloneObject == null) return;

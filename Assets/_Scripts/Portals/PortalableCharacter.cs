@@ -45,13 +45,13 @@ public class PortalableCharacter : MonoBehaviour
 
     public void ExitPortal()
     {
-        if (_inPortal.WallCollider != null)
+        if (_inPortal?.WallCollider != null)
             Physics.IgnoreCollision(_c, _inPortal.WallCollider, false);
-        if (_outPortal.WallCollider != null)
+        if (_outPortal?.WallCollider != null)
             Physics.IgnoreCollision(_c, _outPortal.WallCollider, false);
-        if(_inPortal.PortalCollider != null)
+        if(_inPortal?.PortalCollider != null)
             _inPortal.PortalCollider.SetActive(false);
-        if(_outPortal.PortalCollider != null)
+        if(_outPortal?.PortalCollider != null)
             _outPortal.PortalCollider.SetActive(false);
         _inPortal = null;
         _outPortal = null;
