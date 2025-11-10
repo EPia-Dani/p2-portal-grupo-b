@@ -1,5 +1,6 @@
 // csharp
 
+using System;
 using _Scripts.Interfaces;
 using UnityEngine;
 
@@ -39,6 +40,10 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
 
     // collision tracking: when > 0 the object is colliding
     int collisionCount = 0;
+    
+    public bool IsGrabbed => isGrabbed;
+    public GravityGun HoldingGun => holdingGun;
+    public event Action OnReleasedEvent;
 
     void Awake()
     {
@@ -85,6 +90,8 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
         // apply the last tracked velocities so it carries momentum
         rb.linearVelocity = storedVel;
         rb.angularVelocity = storedAngVel;
+        
+        OnReleasedEvent?.Invoke();
     }
 
     public void OnThrow(GravityGun gravityGun)
