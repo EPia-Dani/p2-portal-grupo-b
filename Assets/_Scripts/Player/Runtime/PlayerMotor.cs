@@ -118,7 +118,7 @@ namespace _Scripts.Player.Runtime
                 {
                     _grounded = true;
                     if (_verticalVel < 0f) _verticalVel = -2f;
-                    if (_externalVelocity.y < 0f) _externalVelocity.y = 0f; // don't push into ground
+                    if (_externalVelocity.magnitude > 0f) _externalVelocity = Vector3.zero;
                 }
                 else
                 {
