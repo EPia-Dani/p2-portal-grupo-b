@@ -13,8 +13,6 @@ public class Portal : MonoBehaviour
     
     [SerializeField] private Renderer screenRenderer; 
     
-    public Transform WarpPlaneTransform => screenRenderer?.transform ?? transform;
-    
     [SerializeField] private LayerMask placementMask;
     
     [SerializeField] private Transform testTransform;

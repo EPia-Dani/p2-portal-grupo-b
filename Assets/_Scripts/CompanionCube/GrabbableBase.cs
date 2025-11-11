@@ -34,16 +34,16 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     RigidbodyInterpolation cachedInterp;
 
     GravityGun holdingGun;
+    
+    Vector3 targetPos;
+    Quaternion targetRot = Quaternion.identity;
+    bool hasTargetPose;
 
     Vector3 storedVel;
     Vector3 storedAngVel;
 
     // collision tracking: when > 0 the object is colliding
     int collisionCount = 0;
-    
-    public bool IsGrabbed => isGrabbed;
-    public GravityGun HoldingGun => holdingGun;
-    public event Action OnReleasedEvent;
 
     void Awake()
     {
@@ -54,7 +54,6 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     public void OnGrab(GravityGun gravityGun)
     {
         holdingGun = gravityGun;
-        followTarget = gravityGun.HoldPoint;
         isGrabbed = true;
 
         cachedUseGravity = rb.useGravity;
@@ -90,82 +89,61 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
         // apply the last tracked velocities so it carries momentum
         rb.linearVelocity = storedVel;
         rb.angularVelocity = storedAngVel;
-        
-        OnReleasedEvent?.Invoke();
     }
 
     public void OnThrow(GravityGun gravityGun)
     {
-        if (gravityGun == null)
-            return;
-        
-        Vector3 throwDir = gravityGun.HoldPoint.forward.normalized;
+        Vector3 throwDir = hasTargetPose ? (targetRot * Vector3.forward).normalized
+            : transform.forward;
         float throwSpeed = 5f;
-        
         OnRelease();
-        
         rb.linearVelocity = storedVel + throwDir * throwSpeed;
         rb.angularVelocity = storedAngVel;
     }
 
+    public void SetTargetPose(Vector3 pos, Quaternion rot)
+    {
+        targetPos = pos;
+        targetRot = rot;
+        hasTargetPose = true;
+    }
+
     void FixedUpdate()
     {
-        if (!isGrabbed || followTarget == null) return;
-
+        if (!isGrabbed) return;
         float dt = Time.fixedDeltaTime;
+        if (!hasTargetPose) return; // until first pose arrives
 
-        // leash check: if colliding, max follow distance = maxFollowDistance, otherwise infinite
-        float leash = Vector3.Distance(rb.position, followTarget.position);
+        // leash check
+        float leash = Vector3.Distance(rb.position, targetPos);
         float currentMaxFollow = (collisionCount > 0) ? maxFollowDistance : Mathf.Infinity;
         if (leash > currentMaxFollow)
         {
             if (collisionCount > 0)
             {
-                // Only release if the object is not sliding/moving (speed below threshold)
-                if (rb.linearVelocity.magnitude <= releaseSpeedThreshold)
-                {
-                    OnRelease();
-                    return;
-                }
-                // else: still colliding and moving -> keep holding despite leash exceeded
+                if (rb.linearVelocity.magnitude <= releaseSpeedThreshold) { OnRelease(); return; }
             }
-            else
-            {
-                // not colliding and beyond leash (shouldn't happen because currentMaxFollow is Infinity),
-                // but keep the original behavior safe.
-                OnRelease();
-                return;
-            }
+            else { OnRelease(); return; }
         }
 
-        // spring force for translation: compute desired acceleration-like velocity change
-        Vector3 toTarget = followTarget.position - rb.position;
-        float dist = toTarget.magnitude;
-
-        // desired velocity from spring (proportional to displacement)
+        // translation spring toward targetPos
+        Vector3 toTarget = targetPos - rb.position;
         Vector3 desiredVel = toTarget * springStrength;
-        // damping proportional to current velocity
         Vector3 dampingVel = -rb.linearVelocity * springDamping;
-        // integrate velocity
         Vector3 nextVel = rb.linearVelocity + (desiredVel + dampingVel) * dt;
-
-        // clamp speed
         if (nextVel.sqrMagnitude > maxFollowSpeed * maxFollowSpeed)
             nextVel = nextVel.normalized * maxFollowSpeed;
 
-        // compute intended move for this tick
         Vector3 move = nextVel * dt;
         if (move.sqrMagnitude > 1e-8f)
         {
             Vector3 dir = move.normalized;
             float moveDist = move.magnitude;
-
             if (Physics.Raycast(rb.position, dir, out RaycastHit hit, moveDist, blockMask, QueryTriggerInteraction.Ignore))
             {
                 Vector3 hitPos = hit.point - dir * surfacePadding;
                 storedVel = (hitPos - rb.position) / dt;
                 rb.MovePosition(hitPos);
-                // zero out nextVel to avoid pushing into obstacle next frame
                 nextVel = Vector3.zero;
             }
             else
@@ -174,43 +152,31 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
                 rb.MovePosition(rb.position + move);
             }
         }
-        else
-        {
-            // tiny motion; still set storedVel
-            storedVel = Vector3.zero;
-        }
+        else storedVel = Vector3.zero;
 
-        // write back velocity tracking to the rigidbody if needed (keep physics consistent)
         rb.linearVelocity = nextVel;
 
-        // angular spring: compute target angular velocity needed to rotate toward followTarget
-        Quaternion deltaQ = followTarget.rotation * Quaternion.Inverse(rb.rotation);
+        // rotation spring toward targetRot
+        Quaternion deltaQ = targetRot * Quaternion.Inverse(rb.rotation);
         deltaQ.ToAngleAxis(out float angleDeg, out Vector3 axis);
         if (float.IsNaN(axis.x) || axis.sqrMagnitude < 1e-8f)
         {
-            // no significant rotation needed
             storedAngVel = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
         else
         {
-            float angleRad = Mathf.Deg2Rad * Mathf.Repeat(angleDeg + 180f, 360f) - Mathf.PI; // signed shortest angle
+            float angleRad = Mathf.Deg2Rad * Mathf.Repeat(angleDeg + 180f, 360f) - Mathf.PI;
             Vector3 axisNorm = axis.normalized;
-            // desired angular velocity (proportional to angle)
             Vector3 desiredAngVel = axisNorm * (angleRad * rotationStrength);
-            // damping
             Vector3 angDamping = -rb.angularVelocity * rotationDamping;
             Vector3 nextAngVel = rb.angularVelocity + (desiredAngVel + angDamping) * dt;
-
-            // clamp
             if (nextAngVel.sqrMagnitude > maxAngularSpeed * maxAngularSpeed)
                 nextAngVel = nextAngVel.normalized * maxAngularSpeed;
 
-            // integrate rotation directly to keep in sync
             Quaternion step = Quaternion.Euler(Mathf.Rad2Deg * dt * nextAngVel);
             Quaternion nextRot = step * rb.rotation;
 
-            // collision-safe rotation is less straightforward; just apply rotation
             storedAngVel = nextAngVel;
             rb.MoveRotation(nextRot);
             rb.angularVelocity = nextAngVel;
