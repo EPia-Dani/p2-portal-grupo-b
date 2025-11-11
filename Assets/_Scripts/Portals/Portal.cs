@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using _Scripts.Portals;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -40,14 +41,9 @@ public class Portal : MonoBehaviour
     private float CornerProbeRadius=> Mathf.Max(Physics.defaultContactOffset, probeRadiusFactor    * Mathf.Min(HalfWidth, HalfHeight));
     private float OverlapThickness => Mathf.Max(Physics.defaultContactOffset, overlapThicknessFactor * HalfHeight);
     private float ForwardProbe     => Mathf.Max(Physics.defaultContactOffset, forwardProbeFactor   * HalfHeight);
+    
+    private readonly List<PortalableBase> _portalables = new();
 
-    // CHANGED: keep legacy list for rigidbody-based objects
-    private readonly List<PortalableObject> _portalObjects = new List<PortalableObject>();
-    
-    // CHANGED: add a list for the player (CharacterController-based)
-    private readonly List<PortalablePlayer> _portalablePlayers = new List<PortalablePlayer>();
-    
-    private readonly List<PortalableCharacter> _portalChars = new List<PortalableCharacter>();
 
 
     public bool IsPlaced { get; private set; } = false;
@@ -87,110 +83,39 @@ public class Portal : MonoBehaviour
 
         // DEBUG: estado de visibilidad (no spamea si no cambia)
         Debug.Log($"[Portal:{name}] Visible={visible} (OtherPortal={(OtherPortal ? OtherPortal.name : "null")})");
-
-        // Objetos con Rigidbody
-        for (int i = 0; i < _portalObjects.Count; ++i)
+        foreach (var p in _portalables)
         {
-            var t = _portalObjects[i].transform;
-            Vector3 objPos = transform.InverseTransformPoint(t.position);
-            if (objPos.z > 0.0f)
-            {
-                Debug.Log($"[Portal:{name}] Warp() PortalableObject -> {_portalObjects[i].name}");
-                _portalObjects[i].Warp();
-            }
-        }
-
-        // CharacterController con cabeza/pivot (PortalableCharacter)
-        for (int i = 0; i < _portalChars.Count; ++i)
-        {
-            var chr = _portalChars[i];
-            if (chr != null && chr.HasCrossedPlane(this) && OtherPortal != null)
-            {
-                Debug.Log($"[Portal:{name}] HasCrossedPlane -> Warp() {chr.name}");
-                chr.Warp();
-            }
+            if (p == null) continue;
+            if (p.HasCrossedPlane(this) && OtherPortal != null)
+                p.Warp();
         }
         
-        // Draw Ray for debugging
         Debug.DrawRay(transform.position, transform.forward * 2.0f, Color.green);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[Portal:{name}] OnTriggerEnter con {other.name} (layer={LayerMask.LayerToName(other.gameObject.layer)})");
-
-        // 1) Objetos con Rigidbody
-        var obj = other.GetComponent<PortalableObject>();
-        if (obj != null)
+        var p = other.GetComponentInParent<PortalableBase>();
+        if (p != null)
         {
-            if (!_portalObjects.Contains(obj)) _portalObjects.Add(obj);
-            obj.SetIsInPortal(this, OtherPortal);
-            Debug.Log($"[Portal:{name}] Registrado PortalableObject: {obj.name} (count={_portalObjects.Count})");
+            if (!_portalables.Contains(p))
+                _portalables.Add(p);
+
+            p.SetIsInPortal(this, OtherPortal);
             return;
         }
-
-        // 2) Player basado en CharacterController (root)
-        var player = other.GetComponentInParent<PortalablePlayer>();
-        if (player != null)
-        {
-            if (!_portalablePlayers.Contains(player)) _portalablePlayers.Add(player);
-            player.SetIsInPortal(this, OtherPortal, _wallCollider);
-            Debug.Log($"[Portal:{name}] Registrado PortalablePlayer: {player.name} (count={_portalablePlayers.Count})");
-            return;
-        }
-
-        // 3) CharacterController con cabeza/pivot (normalmente en el mismo GO del player)
-        var chr = other.GetComponent<PortalableCharacter>();
-        if (chr != null)
-        {
-            if (!_portalChars.Contains(chr)) _portalChars.Add(chr);
-            chr.SetIsInPortal(this, OtherPortal);
-            Debug.Log($"[Portal:{name}] Registrado PortalableCharacter: {chr.name} (count={_portalChars.Count})");
-            return;
-        }
-
-        // Si llega aquí, es un collider que no nos interesa
-         Debug.Log($"[Portal:{name}] TriggerEnter ignorado para {other.name}");
     }
+
     private void OnTriggerExit(Collider other)
     {
-        Debug.Log($"[Portal:{name}] OnTriggerExit con {other.name}");
-
-        var obj = other.GetComponent<PortalableObject>();
-        if (obj != null)
+        var p = other.GetComponentInParent<PortalableBase>();
+        if (p != null && _portalables.Contains(p))
         {
-            if (_portalObjects.Contains(obj))
-            {
-                _portalObjects.Remove(obj);
-                obj.ExitPortal();
-                Debug.Log($"[Portal:{name}] Unregistered PortalableObject: {obj.name} (count={_portalObjects.Count})");
-            }
-            return;
+            _portalables.Remove(p);
+            p.ExitPortal();
         }
-
-        var player = other.GetComponentInParent<PortalablePlayer>();
-        if (player != null)
-        {
-            if (_portalablePlayers.Contains(player))
-            {
-                _portalablePlayers.Remove(player);
-                player.ExitPortal(_wallCollider);
-                Debug.Log($"[Portal:{name}] Unregistered PortalablePlayer: {player.name} (count={_portalablePlayers.Count})");
-            }
-            return;
-        }
-
-        var chr = other.GetComponent<PortalableCharacter>();
-        if (chr != null && _portalChars.Contains(chr))
-        {
-            _portalChars.Remove(chr);
-            chr.ExitPortal();
-            Debug.Log($"[Portal:{name}] Unregistered PortalableCharacter: {chr.name} (count={_portalChars.Count})");
-        }
-
-        // Debug opcional si quieres ver salidas “no relevantes”
-        // Debug.Log($"[Portal:{name}] TriggerExit ignorado para {other.name}");
     }
+    
     public bool PlacePortal(Collider wallCollider, Vector3 pos, Quaternion rot)
     {
         // Pre-posicionado de prueba

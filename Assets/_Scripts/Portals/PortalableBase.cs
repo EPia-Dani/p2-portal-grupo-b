@@ -64,10 +64,7 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
         Kin.Teleport(newPos);
 
         // Rotation
-        Quaternion deltaRot = Quaternion.FromToRotation(inT.forward, outT.forward) * HalfTurn;
-        Kin.Rotation = deltaRot * Kin.Rotation;
-
-        // after computing deltaRot and before setting velocity
+        Quaternion deltaRot = outT.rotation * HalfTurn * Quaternion.Inverse(inT.rotation);
         if (Kin is RigidbodyKinematics)
         {
             var rb = ((RigidbodyKinematics)Kin).GetType()
