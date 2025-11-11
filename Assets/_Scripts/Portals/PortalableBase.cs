@@ -52,8 +52,10 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
     {
         if (inPortal == null || outPortal == null) return;
 
-        Transform inT  = inPortal.transform;
-        Transform outT = outPortal.transform;
+        float scaleRatio = outPortal.CurrentScale / inPortal.CurrentScale;
+        
+        Transform inT  = inPortal.ScreenTransform;
+        Transform outT = outPortal.ScreenTransform;
 
         // Position
         Vector3 relPos = inT.InverseTransformPoint(Kin.Position);
@@ -85,6 +87,10 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
             Kin.Rotation = deltaRot * Kin.Rotation;
         }
         
+        transform.localScale *= scaleRatio;
+        
+        Kin.Velocity *= scaleRatio;
+        
         // Velocity + boost rule (shared)
         Vector3 inVel = Kin.Velocity;
         Vector3 relVel = inT.InverseTransformDirection(inVel);
@@ -109,7 +115,7 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
     public virtual bool HasCrossedPlane(Portal portal)
     {
         if (portal == null) return false;
-        Vector3 local = portal.transform.InverseTransformPoint(PlaneProbePosition);
+        Vector3 local = portal.ScreenTransform.InverseTransformPoint(PlaneProbePosition);
         return local.z > 0f;
     }
 

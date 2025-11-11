@@ -142,8 +142,8 @@ namespace _Scripts.Player.Runtime
         private bool IsGroundedOnNonPortal()
         {
             Vector3 origin = transform.position + Vector3.up * 0.1f;
-            float dist = 2f;
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, dist, groundMask, QueryTriggerInteraction.Ignore))
+            float dist = 4f;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, dist, groundMask, QueryTriggerInteraction.Collide))
             {
                 if (hit.collider.GetComponentInParent<Portal>() != null) return false;
                 return true;

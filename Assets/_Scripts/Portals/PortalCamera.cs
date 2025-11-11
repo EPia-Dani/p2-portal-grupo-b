@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -16,23 +14,32 @@ public class PortalCamera : MonoBehaviour
     [SerializeField]
     private int iterations = 7;
 
-    private RenderTexture tempTexture1;
-    private RenderTexture tempTexture2;
-
-    private Camera mainCamera;
+    private RenderTexture _tempTexture1;
+    private RenderTexture _tempTexture2;
 
     private void Awake()
     {
-        mainCamera = GetComponent<Camera>();
-
-        tempTexture1 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
-        tempTexture2 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture1 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture2 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
     }
 
     private void Start()
     {
-        portals[0].Renderer.material.mainTexture = tempTexture1;
-        portals[1].Renderer.material.mainTexture = tempTexture2;
+        BindRT(portals[0], _tempTexture1);
+        BindRT(portals[1], _tempTexture2);
+    }
+
+    void BindRT(Portal p, RenderTexture rt)
+    {
+        if (!p || !p.Renderer) return;
+        var r = p.Renderer;
+        bool urp = r.sharedMaterial && r.sharedMaterial.HasProperty("_BaseMap");
+        string texName = urp ? "_BaseMap" : "_MainTex";
+
+        var mpb = new MaterialPropertyBlock();
+        r.GetPropertyBlock(mpb);
+        mpb.SetTexture(texName, rt);
+        r.SetPropertyBlock(mpb);
     }
 
     private void OnEnable()
@@ -54,7 +61,7 @@ public class PortalCamera : MonoBehaviour
 
         if (portals[0].Renderer.isVisible)
         {
-            portalCamera.targetTexture = tempTexture1;
+            portalCamera.targetTexture = _tempTexture1;
             for (int i = iterations - 1; i >= 0; --i)
             {
                 RenderCamera(portals[0], portals[1], i, SRC);
@@ -63,7 +70,7 @@ public class PortalCamera : MonoBehaviour
 
         if(portals[1].Renderer.isVisible)
         {
-            portalCamera.targetTexture = tempTexture2;
+            portalCamera.targetTexture = _tempTexture2;
             for (int i = iterations - 1; i >= 0; --i)
             {
                 RenderCamera(portals[1], portals[0], i, SRC);

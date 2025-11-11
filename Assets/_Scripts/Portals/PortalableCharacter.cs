@@ -37,7 +37,6 @@ public class PortalableCharacter : PortalableBase
     
     protected override void OnAfterWarp(Transform inT, Transform outT, Quaternion deltaRot)
     {
-        if (!look) { ExitPortal(); return; }
 
         // compute target camera orientation after warp
         Quaternion targetHeadRot = deltaRot * (head ? head.rotation : look.transform.rotation);
@@ -52,8 +51,7 @@ public class PortalableCharacter : PortalableBase
 
         ToYawPitch(targetHeadRot, out float yawAbs, out float pitchAbs);
         look.SetYawPitchAbsolute(yawAbs, -pitchAbs);
-
-        ExitPortal();
+        
     }
 
     void ApplyAbsoluteYawPitchFromQuaternion(Quaternion q)

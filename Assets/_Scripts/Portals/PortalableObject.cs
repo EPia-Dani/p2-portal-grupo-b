@@ -14,15 +14,6 @@ public class PortalableObject : PortalableBase
     
     bool _suppressCloneOneFrame;
 
-    void FixedUpdate()
-    {
-        if (inPortal && outPortal && HasCrossedPlane(inPortal))
-        {
-            _suppressCloneOneFrame = true;
-            Warp();
-        }
-    }
-
     protected void Awake()
     {
         _rb  = GetComponent<Rigidbody>();

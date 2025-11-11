@@ -27,7 +27,6 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     [SerializeField] float minSpeed = 1f, damagePerKg = 2f;
 
     Rigidbody rb;
-    Transform followTarget;
     bool isGrabbed;
     bool cachedUseGravity;
     CollisionDetectionMode cachedCD;
@@ -78,7 +77,6 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
         holdingGun?.Release();
         holdingGun = null;
         isGrabbed = false;
-        followTarget = null;
 
         rb.useGravity = cachedUseGravity;
         rb.linearDamping = 0.05f;

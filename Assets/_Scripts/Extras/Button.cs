@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using _Scripts.Interfaces;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -13,11 +15,27 @@ public class Button : MonoBehaviour
     [SerializeField]
     private float pressDuration = 0.4f;
     
+    [SerializeField]
+    private MonoBehaviour target;
+    private IButtonAction action;
+    
     private float state = 0f;
     
     private HashSet<Collider> inside = new ();
     
     private Coroutine pressCoroutine = null;
+    
+    private void Awake()
+    {
+        if (target is IButtonAction action)
+        {
+            this.action = action;
+        }
+        else
+        {
+            Debug.LogWarning("Button target does not implement IButtonAction interface.", target);
+        }
+    }
     
     
     private void OnTriggerEnter(Collider other)
@@ -29,6 +47,10 @@ public class Button : MonoBehaviour
             if (pressCoroutine != null)
                 StopCoroutine(pressCoroutine);
             pressCoroutine = StartCoroutine(PressState(true));
+        }
+        if (inside.Count == 1)
+        {
+            action?.OnButtonPressed();
         }
     }
     
@@ -43,6 +65,7 @@ public class Button : MonoBehaviour
                 if (pressCoroutine != null)
                     StopCoroutine(pressCoroutine);
                 pressCoroutine = StartCoroutine(PressState(false));
+                action?.OnButtonReleased();
             }
         }
     }

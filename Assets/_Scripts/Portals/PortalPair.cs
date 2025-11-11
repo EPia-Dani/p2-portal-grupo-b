@@ -12,7 +12,7 @@ public class PortalPair : MonoBehaviour
 
         if(Portals.Length != 2)
         {
-            Debug.LogError("PortalPair children must contain exactly two Portal components in total.");
+            Debug.LogError("PortalPair children must contain exactly two Portal components in total. Found: " + Portals.Length);
         }
     }
 }
