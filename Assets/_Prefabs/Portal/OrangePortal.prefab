@@ -288,6 +288,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   otherPortal: {fileID: 0}
   screenRenderer: {fileID: 7250774004495952361}
+  portalParticles: {fileID: 0}
   portalColour: {r: 1, g: 0.5063188, b: 0, a: 1}
   wallCollider: {fileID: 0}
   portalCollider: {fileID: 6770361252576951411}
