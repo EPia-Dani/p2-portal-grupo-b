@@ -124,10 +124,15 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 11
       objectReference: {fileID: 0}
+    - target: {fileID: 7250774004495952361, guid: bdf60b69a6e12bb4dae103af40f99737,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: ca2347cf64cb74040903087c3c8ad1cb, type: 2}
     - target: {fileID: 7682699580546089322, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.0539999
+      value: -0.1
       objectReference: {fileID: 0}
     - target: {fileID: 7976083150296154598, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
@@ -247,18 +252,23 @@ PrefabInstance:
     - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: portalColour.b
-      value: 0
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: portalColour.g
-      value: 0.5063188
+      value: 0.5764706
       objectReference: {fileID: 0}
     - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: portalColour.r
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
+        type: 3}
+      propertyPath: portalParticles
+      value: 
+      objectReference: {fileID: 1062818695335736594}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -268,6 +278,12 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 6333008667588493398}
   m_SourcePrefab: {fileID: 100100000, guid: bdf60b69a6e12bb4dae103af40f99737, type: 3}
+--- !u!2083052967 &1062818695335736594 stripped
+VisualEffect:
+  m_CorrespondingSourceObject: {fileID: 3324988967320745806, guid: bdf60b69a6e12bb4dae103af40f99737,
+    type: 3}
+  m_PrefabInstance: {fileID: 2349568531695108700}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &3002833028235594468 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 664118883922512056, guid: bdf60b69a6e12bb4dae103af40f99737,
@@ -294,7 +310,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.9999999, y: 1, z: 6.1232336e-17}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 0, z: 0.03}
 --- !u!4 &5729532082329032472 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8005213428340921668, guid: bdf60b69a6e12bb4dae103af40f99737,
@@ -505,7 +521,7 @@ PrefabInstance:
     - target: {fileID: 5422675860332191900, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.0539999
+      value: -0.1
       objectReference: {fileID: 0}
     - target: {fileID: 6124775625334332537, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
@@ -557,6 +573,21 @@ PrefabInstance:
       propertyPath: portalCollider
       value: 
       objectReference: {fileID: 8134483535799549694}
+    - target: {fileID: 6184478784001617053, guid: fcde9addb6824604d9f18f9b4bf64a18,
+        type: 3}
+      propertyPath: portalColour.g
+      value: 0.54901963
+      objectReference: {fileID: 0}
+    - target: {fileID: 6184478784001617053, guid: fcde9addb6824604d9f18f9b4bf64a18,
+        type: 3}
+      propertyPath: portalColour.r
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6184478784001617053, guid: fcde9addb6824604d9f18f9b4bf64a18,
+        type: 3}
+      propertyPath: portalParticles
+      value: 
+      objectReference: {fileID: 8194604262170936549}
     - target: {fileID: 6471193028264012432, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
       propertyPath: m_RenderPostProcessing
@@ -624,7 +655,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.99999994, y: 1, z: 6.1232336e-17}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 0, z: 0.03}
 --- !u!4 &6696865930192582239 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2892051754215134396, guid: fcde9addb6824604d9f18f9b4bf64a18,
@@ -634,6 +665,12 @@ Transform:
 --- !u!1 &8134483535799549694 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 302251378378202141, guid: fcde9addb6824604d9f18f9b4bf64a18,
+    type: 3}
+  m_PrefabInstance: {fileID: 8417981606001812195}
+  m_PrefabAsset: {fileID: 0}
+--- !u!2083052967 &8194604262170936549 stripped
+VisualEffect:
+  m_CorrespondingSourceObject: {fileID: 390608666788324870, guid: fcde9addb6824604d9f18f9b4bf64a18,
     type: 3}
   m_PrefabInstance: {fileID: 8417981606001812195}
   m_PrefabAsset: {fileID: 0}

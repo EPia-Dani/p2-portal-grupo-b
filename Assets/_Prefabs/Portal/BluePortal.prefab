@@ -331,6 +331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   otherPortal: {fileID: 0}
   screenRenderer: {fileID: 1587270621914677214}
+  portalParticles: {fileID: 0}
   portalColour: {r: 0, g: 1, b: 1, a: 1}
   wallCollider: {fileID: 0}
   portalCollider: {fileID: 302251378378202141}
@@ -629,11 +630,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 5489476377793474069, guid: 6d0467094e720f049ba9894e4d8b7ba4,
-        type: 3}
-      propertyPath: m_Layer
-      value: 6
-      objectReference: {fileID: 0}
     - target: {fileID: 7625603049227067052, guid: 6d0467094e720f049ba9894e4d8b7ba4,
         type: 3}
       propertyPath: m_Name
@@ -644,9 +640,7 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 6
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 6934995380746725937, guid: 6d0467094e720f049ba9894e4d8b7ba4, type: 3}
-    - {fileID: 4470548958963010254, guid: 6d0467094e720f049ba9894e4d8b7ba4, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
