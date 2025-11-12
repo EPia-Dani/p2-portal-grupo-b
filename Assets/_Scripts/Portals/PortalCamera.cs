@@ -13,6 +13,9 @@ public class PortalCamera : MonoBehaviour
 
     [SerializeField]
     private int iterations = 7;
+    
+    [SerializeField]
+    private LayerMask[] layerMask = new LayerMask[2];
 
     private RenderTexture _tempTexture1;
     private RenderTexture _tempTexture2;
@@ -20,7 +23,15 @@ public class PortalCamera : MonoBehaviour
     private void Awake()
     {
         _tempTexture1 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture1.depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt;
+        _tempTexture1.useMipMap = false;
+        _tempTexture1.autoGenerateMips = false;
         _tempTexture2 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture2.depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt;
+        _tempTexture2.useMipMap = false;
+        _tempTexture2.autoGenerateMips = false;
+        portalCamera.targetTexture = _tempTexture1;
+        portalCamera.clearFlags = CameraClearFlags.SolidColor;
     }
 
     private void Start()
@@ -64,6 +75,7 @@ public class PortalCamera : MonoBehaviour
             portalCamera.targetTexture = _tempTexture1;
             for (int i = iterations - 1; i >= 0; --i)
             {
+                portalCamera.cullingMask = layerMask[0];
                 RenderCamera(portals[0], portals[1], i, SRC);
             }
         }
@@ -73,6 +85,7 @@ public class PortalCamera : MonoBehaviour
             portalCamera.targetTexture = _tempTexture2;
             for (int i = iterations - 1; i >= 0; --i)
             {
+                portalCamera.cullingMask = layerMask[1];
                 RenderCamera(portals[1], portals[0], i, SRC);
             }
         }
@@ -80,6 +93,7 @@ public class PortalCamera : MonoBehaviour
 
     private void RenderCamera(Portal inPortal, Portal outPortal, int iterationID, ScriptableRenderContext SRC)
     {
+        
         Transform inTransform = inPortal.transform;
         Transform outTransform = outPortal.transform;
 

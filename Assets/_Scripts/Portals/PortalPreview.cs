@@ -61,7 +61,7 @@ public class PortalPreview : MonoBehaviour
     public void Tick(Vector3 origin, Vector3 dir, LayerMask placementMask)
     {
         // Ray principal contra superficies colocables
-        if (!Physics.Raycast(origin, dir, out var hit, maxDistance, placementMask, QueryTriggerInteraction.Ignore))
+        if (!Physics.Raycast(origin, dir, out var hit, maxDistance, placementMask, QueryTriggerInteraction.Collide))
         {
             SetInvalid();
             return;

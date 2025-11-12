@@ -63,14 +63,11 @@ public class PortalPlacement : MonoBehaviour
         if (portalPreview != null && portalPreview.IsValid && portalPreview.Surface != null)
         {
             portals.Portals[portalID].SetDesiredScale(portalPreview.ReferencePortal.DesiredScale);
-            bool ok = portals.Portals[portalID].PlacePrecomputed(
+            portals.Portals[portalID].PlacePrecomputed(
                 portalPreview.Surface,
                 portalPreview.PreviewPosition,
                 portalPreview.PreviewRotation
             );
-            if (debugLogs) Debug.Log($"[PortalPlacement] PlacePortal(id={portalID}) via PREVIEW => {ok}");
-            if (ok && crosshair != null) crosshair.SetPortalPlaced(portalID, true);
-            if (!ok && debugLogs) Debug.LogWarning("[PortalPlacement] Preview placement failed unexpectedly.");
         }
     }
 }

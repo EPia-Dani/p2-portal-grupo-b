@@ -12,7 +12,7 @@ public class GravityGun : MonoBehaviour
     
     static readonly Quaternion HalfTurn = Quaternion.Euler(0,180,0);
 
-    private IGrabbable grabbedObject;
+    private IGrabbable _grabbedObject;
     
     [SerializeField] private bool drawHoldRayGizmos = true;
     [SerializeField] private float gizmoSphereRadius = 0.08f;
@@ -21,14 +21,14 @@ public class GravityGun : MonoBehaviour
     {
         if (context.started)
         {
-            if (grabbedObject == null)
+            if (_grabbedObject == null)
             {
                 TryPickup();
             }
             else
             {
-                grabbedObject?.OnRelease();
-                grabbedObject = null;
+                _grabbedObject?.OnRelease();
+                _grabbedObject = null;
             }
         }
     }
@@ -45,17 +45,17 @@ public class GravityGun : MonoBehaviour
     {
         if (context.started)
         {
-            grabbedObject?.OnRelease();
-            grabbedObject = null;
+            _grabbedObject?.OnRelease();
+            _grabbedObject = null;
         }
     }
     
     private void Shoot()
     {
-        if (grabbedObject != null)
+        if (_grabbedObject != null)
         {
-            grabbedObject?.OnThrow(this);
-            grabbedObject = null;
+            _grabbedObject?.OnThrow(this);
+            _grabbedObject = null;
         }
     }
     
@@ -67,160 +67,133 @@ public class GravityGun : MonoBehaviour
             IGrabbable grabbable = hitInfo.collider.GetComponent<IGrabbable>();
             if (grabbable != null)
             {
-                grabbedObject = grabbable;
-                grabbedObject?.OnGrab(this);
+                _grabbedObject = grabbable;
+                _grabbedObject?.OnGrab(this);
             }
         }
     }
 
     public void Release()
     {
-        grabbedObject = null;
+        _grabbedObject = null;
     }
     
     void LateUpdate() {
-        if (grabbedObject == null) return;
+        if (_grabbedObject == null) return;
         if (TryGetPortalAwareHoldPose(out var p, out var r)) {
-            grabbedObject.SetTargetPose(p, r); // grabbable handles interpolation
+            _grabbedObject.SetTargetPose(p, r); // grabbable handles interpolation
         }
     }
     
-    public bool TryGetPortalAwareHoldPose(out Vector3 pos, out Quaternion rot) {
-        Vector3 o = playerCamera.transform.position;
-        Vector3 d = playerCamera.transform.forward.normalized;
-        Quaternion q = playerCamera.transform.rotation;
-        const float EPS = 0.01f;
+    private const int MaxHops = 1;
+    private const float EPS = 0.01f;
 
-        for (int hops = 0; hops < 4; hops++) {
-            // 1) Hit real geometry first
-            if (Physics.Raycast(o, d, out var hit, holdDistance, hitMask, QueryTriggerInteraction.Ignore)) {
-                pos = hit.point;
-                rot = q;
+    private bool TraceHoldRay(bool collectPoints, out Vector3 holdPos, out Quaternion holdRot,
+                              out System.Collections.Generic.List<Vector3> points)
+    {
+        points = collectPoints ? new System.Collections.Generic.List<Vector3>(8) : null;
+
+        Transform camT = playerCamera ? playerCamera.transform : transform;
+        Vector3 o = camT.position;
+        Vector3 d = camT.forward.normalized;
+        Quaternion q = camT.rotation;
+
+        if (collectPoints) points.Add(o);
+
+        float remaining = holdDistance;
+        int combinedMask = hitMask | portalScreenMask;
+
+        for (int hops = 0; hops < MaxHops; hops++)
+        {
+            // Nearest-hit wins among solids and portal screens
+            if (!Physics.Raycast(o, d, out var hit, remaining, combinedMask, QueryTriggerInteraction.Collide))
+            {
+                // nothing within remaining distance
+                Vector3 end = o + d * remaining;
+                if (collectPoints) points.Add(end);
+                holdPos = end;
+                holdRot = q;
                 return true;
             }
-            // 2) If no solid, check portal screen
-            if (Physics.Raycast(o, d, out var phit, Mathf.Infinity, portalScreenMask, QueryTriggerInteraction.Collide)) {
-                // Map ray through portal
-                var portal = phit.collider.GetComponentInParent<Portal>();
-                var other  = portal != null ? portal.OtherPortal : null;
-                if (portal == null || other == null) break; // safety
 
-                Transform inT  = portal.transform;
-                Transform outT = other.transform;
+            if (collectPoints) points.Add(hit.point);
 
-                // Transport origin slightly past the exit plane
-                Vector3 relP = inT.InverseTransformPoint(phit.point + d * EPS);
-                relP = HalfTurn * relP;
-                o = outT.TransformPoint(relP) + outT.forward * EPS;
-
-                // Transport direction and rotation
-                Vector3 relD = inT.InverseTransformDirection(d);
-                relD = (HalfTurn * relD).normalized;
-                d = outT.TransformDirection(relD).normalized;
-
-                Quaternion deltaRot = outT.rotation * HalfTurn * Quaternion.Inverse(inT.rotation);
-                q = deltaRot * q;
-                
-                continue;
-            }
-            // 3) Nothing hit: place at max distance in current space
-            pos = o + d * holdDistance;
-            rot = q;
-            return true;
-        }
-        // Fallback after hop cap
-        pos = o + d * holdDistance;
-        rot = q;
-        return true;
-    }
-    
-    // ===== Gizmos for hold ray =====
-    
-    private void OnDrawGizmosSelected()
-    {
-        if (!drawHoldRayGizmos) return;
-
-        GetPortalAwareRayPath(out var holdPos, out var holdRot, out var pts);
-
-        // Path
-        Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.9f);
-        for (int i = 0; i < pts.Count - 1; i++)
-            Gizmos.DrawRay(pts[i], pts[i + 1]-pts[i]);
-
-        // Hold sphere
-        Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.9f);
-        Gizmos.DrawSphere(holdPos, gizmoSphereRadius);
-
-        // Forward from hold orientation (short tick)
-        Gizmos.color = new Color(1f, 0.3f, 0.1f, 0.9f);
-        Gizmos.DrawLine(holdPos, holdPos + (holdRot * Vector3.forward) * 0.25f);
-    }
-    
-    private void GetPortalAwareRayPath(out Vector3 holdPos, out Quaternion holdRot, out System.Collections.Generic.List<Vector3> points)
-    {
-        points = new System.Collections.Generic.List<Vector3>(8);
-
-        Vector3 o = playerCamera ? playerCamera.transform.position : transform.position;
-        Vector3 d = playerCamera ? playerCamera.transform.forward.normalized : transform.forward;
-        Quaternion q = playerCamera ? playerCamera.transform.rotation : transform.rotation;
-        const float EPS = 0.01f;
-
-        points.Add(o);
-
-        for (int hops = 0; hops < 4; hops++)
-        {
-            // 1) Hit real geometry first (limited by holdDistance)
-            if (Physics.Raycast(o, d, out var hit, holdDistance, hitMask, QueryTriggerInteraction.Ignore))
+            // Portal screen?
+            bool hitIsPortal = ((portalScreenMask.value & (1 << hit.collider.gameObject.layer)) != 0);
+            if (hitIsPortal)
             {
-                points.Add(hit.point);
-                holdPos = hit.point;
-                holdRot = q;
-                return;
-            }
-
-            // 2) Check portal "screen" to traverse
-            if (Physics.Raycast(o, d, out var phit, Mathf.Infinity, portalScreenMask, QueryTriggerInteraction.Collide))
-            {
-                // draw up to the portal hit
-                points.Add(phit.point);
-
-                var portal = phit.collider.GetComponentInParent<Portal>();
+                var portal = hit.collider.GetComponentInParent<Portal>();
                 var other  = portal ? portal.OtherPortal : null;
                 if (!portal || !other) break;
 
+                // step to the screen and reduce remaining distance
+                remaining -= hit.distance;
+
+                // screen-space transforms for stable mapping
                 Transform inT  = portal.transform;
-                Transform outT = other.transform;
+                Transform outT = other.ScreenTransform;
 
-                // Transport origin slightly past the exit plane
-                Vector3 relP = inT.InverseTransformPoint(phit.point + d * EPS);
+                // origin: just past exit plane
+                Vector3 relP = inT.InverseTransformPoint(hit.point + d * EPS);
                 relP = HalfTurn * relP;
-                o = outT.TransformPoint(relP) + outT.forward * EPS;
+                o = outT.TransformPoint(relP);
 
-                // Transport direction and rotation
+                // direction
                 Vector3 relD = inT.InverseTransformDirection(d);
                 relD = (HalfTurn * relD).normalized;
                 d = outT.TransformDirection(relD).normalized;
 
-                Quaternion deltaRot = outT.rotation * HalfTurn * Quaternion.Inverse(inT.rotation);
-                q = deltaRot * q;
+                // rotation via forward/up mapping
+                Vector3 fL = inT.InverseTransformDirection(q * Vector3.forward);
+                Vector3 uL = inT.InverseTransformDirection(q * Vector3.up);
+                fL = (HalfTurn * fL);
+                uL = (HalfTurn * uL);
+                Vector3 fW = outT.TransformDirection(fL).normalized;
+                Vector3 uW = Vector3.ProjectOnPlane(outT.TransformDirection(uL), fW).normalized;
+                q = Quaternion.LookRotation(fW, uW);
 
-                // Continue from new origin; also add a tiny step so the next draw segment starts visibly beyond the portal
-                points.Add(o);
+                if (collectPoints) points.Add(o);
+                // continue with remaining distance in the new space
                 continue;
             }
 
-            // 3) Nothing hit: end at max distance in current space
-            Vector3 end = o + d * holdDistance;
-            points.Add(end);
-            holdPos = end;
+            // Solid hit first → place hold here
+            holdPos = hit.point;
             holdRot = q;
-            return;
+            return true;
         }
 
         // Fallback after hop cap
-        Vector3 fallbackEnd = o + d * holdDistance;
-        points.Add(fallbackEnd);
-        holdPos = fallbackEnd;
+        Vector3 fallback = o + d * remaining;
+        if (collectPoints) points.Add(fallback);
+        holdPos = fallback;
         holdRot = q;
+        return true;
     }
+
+
+    // ---- Public API used by gameplay ----
+    public bool TryGetPortalAwareHoldPose(out Vector3 pos, out Quaternion rot)
+    {
+        return TraceHoldRay(false, out pos, out rot, out _);
+    }
+
+    // ---- Gizmos use the exact same tracer ----
+    private void OnDrawGizmosSelected()
+    {
+    if (!drawHoldRayGizmos) return;
+
+    if (TraceHoldRay(true, out var holdPos, out var holdRot, out var pts))
+    {
+        Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.9f);
+        for (int i = 0; i < pts.Count - 1; i++)
+            Gizmos.DrawLine(pts[i], pts[i + 1]);
+
+        Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.9f);
+        Gizmos.DrawSphere(holdPos, gizmoSphereRadius);
+
+        Gizmos.color = new Color(1f, 0.3f, 0.1f, 0.9f);
+        Gizmos.DrawLine(holdPos, holdPos + (holdRot * Vector3.forward) * 0.25f);
+    }
+}
 }

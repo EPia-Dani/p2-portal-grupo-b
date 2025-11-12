@@ -343,8 +343,8 @@ MonoBehaviour:
   forwardProbeFactor: 0.1
   wallGap: 0.02
   snapStep: 0.5
-  snapRings: 8
-  snapAngles: 24
+  snapRings: 24
+  snapAngles: 64
   placeSound: {fileID: 8300000, guid: d9c3f83f055fbb84e850348fd247fd19, type: 3}
   enterSound: {fileID: 8300000, guid: 81de187d086c3e040a3fafd40c408dc9, type: 3}
   exitSound: {fileID: 8300000, guid: 7ace79e444b50bd4a90ee6274addb3cf, type: 3}

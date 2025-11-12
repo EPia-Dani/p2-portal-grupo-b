@@ -11,8 +11,6 @@ public class PortalableObject : PortalableBase
     Rigidbody _rb;
     Collider _col;
     RigidbodyKinematics _kin;
-    
-    bool _suppressCloneOneFrame;
 
     protected void Awake()
     {
@@ -29,7 +27,6 @@ public class PortalableObject : PortalableBase
 
     void LateUpdate()
     {
-        if (_suppressCloneOneFrame) { if (_clone) _clone.SetActive(false); _suppressCloneOneFrame = false; return; }
         if (inPortal && outPortal) UpdateCloneTransform(); else if (_clone) _clone.SetActive(false);
     }
 
@@ -56,7 +53,7 @@ public class PortalableObject : PortalableBase
         relRot = HalfTurn * relRot;
         _clone.transform.rotation = outT.rotation * relRot;
 
-        _clone.transform.localScale = transform.localScale;
+        _clone.transform.localScale = transform.localScale * (outPortal.CurrentScale / inPortal.CurrentScale);
     }
 
     GameObject BuildVisualClone()

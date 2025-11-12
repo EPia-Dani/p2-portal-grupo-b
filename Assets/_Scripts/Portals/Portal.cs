@@ -129,7 +129,7 @@ public class Portal : MonoBehaviour
         var portalable = other.GetComponentInParent<PortalableBase>();
         if (portalable != null && !_portalables.Contains(portalable))
         {
-            _portalables.Add(portalable); 
+            _portalables.Add(portalable);
         }
         portalable.SetIsInPortal(this, otherPortal);
     }
@@ -200,6 +200,15 @@ public class Portal : MonoBehaviour
         FixOverhangs();
         FixIntersections();
         if (!CheckSupportPolicy()) return false;
+        
+        const float kVerticalSnapDeg = 5f; // tolerance: treat ~floor as floor
+        Vector3 f = testT.forward;         // still points into the surface
+        float angToUp = Vector3.Angle(f, Vector3.up);
+        
+        if (angToUp > kVerticalSnapDeg && angToUp < 175f)
+        {
+            testT.rotation = Quaternion.LookRotation(f, Vector3.up);
+        }
 
         finalPosition = testT.position - testT.forward * wallGap; // forward points into wall
         finalRotation = testT.rotation;
@@ -292,10 +301,10 @@ public class Portal : MonoBehaviour
 
         Vector3[] local =
         {
-            new Vector3(-HalfWidth, 0f, -FaceOffset),
-            new Vector3(+HalfWidth, 0f, -FaceOffset),
-            new Vector3(0f, -HalfHeight, -FaceOffset),
-            new Vector3(0f, +HalfHeight, -FaceOffset),
+            new (-HalfWidth, 0f, -FaceOffset),
+            new (+HalfWidth, 0f, -FaceOffset),
+            new (0f, -HalfHeight, -FaceOffset),
+            new (0f, +HalfHeight, -FaceOffset),
         };
 
         foreach (var lp in local)
@@ -315,16 +324,15 @@ public class Portal : MonoBehaviour
         return testT.TransformPoint(new Vector3(x, y, zLocal));
     }
     
-    public bool PlacePrecomputed(Collider surface, Vector3 finalPosition, Quaternion finalRotation)
+    public void PlacePrecomputed(Collider surface, Vector3 finalPosition, Quaternion finalRotation)
     {
-        if (surface == null) return false;
+        if (surface == null) return;
         wallCollider = surface;
         transform.SetPositionAndRotation(finalPosition, finalRotation);
         transform.localScale = new Vector3(desiredScale, desiredScale, 1f);
         IsPlaced = true;
         if (portalCollider) portalCollider.SetActive(true);
         PlayPlaceSound();
-        return true;
     }
     
     public void GetHalfExtentsForPreview(out float halfW, out float halfH)

@@ -204,7 +204,7 @@ GameObject:
   - component: {fileID: 8003982007210484921}
   - component: {fileID: 524038609932274508}
   - component: {fileID: 2927780999399684879}
-  m_Layer: 7
+  m_Layer: 5
   m_Name: PortalPreview
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -428,7 +428,7 @@ Camera:
   m_Depth: 100
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 895
+    m_Bits: 3967
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -509,6 +509,11 @@ MonoBehaviour:
   - {fileID: 0}
   portalCamera: {fileID: 0}
   iterations: 7
+  layerMask:
+  - serializedVersion: 2
+    m_Bits: 2015
+  - serializedVersion: 2
+    m_Bits: 3039
 --- !u!1 &6689633196677941504
 GameObject:
   m_ObjectHideFlags: 0
@@ -779,6 +784,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: 30bc4fd9-c062-4a40-8eff-a7904fac07ac
     m_ActionName: 'Player/Secondary[/Mouse/rightButton,/DualSenseGamepadHID/leftTrigger]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 4922871141645490996}
+        m_TargetAssemblyTypeName: PortalPlacement, Assembly-CSharp
+        m_MethodName: OnScalePortal
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: cb991cf2-d27f-4206-ae25-a6b9d4de4a45
+    m_ActionName: 'Player/Scroll[/Mouse/scroll/down,/Mouse/scroll/up]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: Player
@@ -857,10 +878,10 @@ MonoBehaviour:
   grabRange: 5
   playerCamera: {fileID: 376243741540011110}
   holdPoint: {fileID: 3699528013954564300}
-  holdDistance: 4
+  holdDistance: 3
   hitMask:
     serializedVersion: 2
-    m_Bits: 503
+    m_Bits: 3575
   portalScreenMask:
     serializedVersion: 2
     m_Bits: 512
@@ -894,11 +915,12 @@ MonoBehaviour:
   portals: {fileID: 0}
   layerMask:
     serializedVersion: 2
-    m_Bits: 576
+    m_Bits: 64
   crosshair: {fileID: 0}
   lookTransform: {fileID: 1386540769815856080}
   portalPreview: {fileID: 524038609932274508}
   debugLogs: 1
+  scrollScaleSensitivity: 0.15
 --- !u!114 &3479803256049097758
 MonoBehaviour:
   m_ObjectHideFlags: 0
