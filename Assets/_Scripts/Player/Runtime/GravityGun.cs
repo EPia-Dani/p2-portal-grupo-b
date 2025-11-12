@@ -9,6 +9,7 @@ public class GravityGun : MonoBehaviour
     [SerializeField] private float holdDistance = 2f;
     [SerializeField] private LayerMask hitMask;
     [SerializeField] private LayerMask portalScreenMask;
+    [SerializeField] private LayerMask grabbableMask;
     
     static readonly Quaternion HalfTurn = Quaternion.Euler(0,180,0);
 
@@ -62,7 +63,7 @@ public class GravityGun : MonoBehaviour
     private void TryPickup()
     {
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hitInfo, grabRange))
+        if (Physics.Raycast(ray, out RaycastHit hitInfo, grabRange, grabbableMask, QueryTriggerInteraction.Ignore))
         {
             IGrabbable grabbable = hitInfo.collider.GetComponent<IGrabbable>();
             if (grabbable != null)
@@ -126,35 +127,21 @@ public class GravityGun : MonoBehaviour
                 var other  = portal ? portal.OtherPortal : null;
                 if (!portal || !other) break;
 
-                // step to the screen and reduce remaining distance
+                // consume distance to the screen
                 remaining -= hit.distance;
 
-                // screen-space transforms for stable mapping
-                Transform inT  = portal.transform;
-                Transform outT = other.ScreenTransform;
+                // map origin and direction using Portal helpers (scale + center-aware)
+                o = portal.MapPointToOther(hit.point, d, enterOffset: EPS, exitBackoff: 0.06f);
+                d = portal.MapDirectionToOther(d);
 
-                // origin: just past exit plane
-                Vector3 relP = inT.InverseTransformPoint(hit.point + d * EPS);
-                relP = HalfTurn * relP;
-                o = outT.TransformPoint(relP);
-
-                // direction
-                Vector3 relD = inT.InverseTransformDirection(d);
-                relD = (HalfTurn * relD).normalized;
-                d = outT.TransformDirection(relD).normalized;
-
-                // rotation via forward/up mapping
-                Vector3 fL = inT.InverseTransformDirection(q * Vector3.forward);
-                Vector3 uL = inT.InverseTransformDirection(q * Vector3.up);
-                fL = (HalfTurn * fL);
-                uL = (HalfTurn * uL);
-                Vector3 fW = outT.TransformDirection(fL).normalized;
-                Vector3 uW = Vector3.ProjectOnPlane(outT.TransformDirection(uL), fW).normalized;
-                q = Quaternion.LookRotation(fW, uW);
+                // map rotation using mapped forward/up through the portal
+                Vector3 fW = portal.MapDirectionToOther(q * Vector3.forward);
+                Vector3 uW = portal.MapDirectionToOther(q * Vector3.up);
+                uW = Vector3.ProjectOnPlane(uW, fW).normalized;
+                q = Quaternion.LookRotation(fW.normalized, uW);
 
                 if (collectPoints) points.Add(o);
-                // continue with remaining distance in the new space
-                continue;
+                continue; // keep tracing with remaining distance
             }
 
             // Solid hit first → place hold here

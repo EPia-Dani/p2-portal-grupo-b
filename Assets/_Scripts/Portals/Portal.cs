@@ -340,4 +340,39 @@ public class Portal : MonoBehaviour
         halfW = HalfWidth; halfH = HalfHeight; // already uses desired vs current
     }
     
+    public Vector3 MapPointToOther(Vector3 pointWS, Vector3 inDirWS, float enterOffset = 0.0f, float exitBackoff = 0.06f)
+    {
+        if (OtherPortal == null) return pointWS;
+
+        Transform inT  = transform;
+        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+
+        // localize relative to portal center, step slightly past the screen
+        Vector3 pLocal = inT.InverseTransformPoint(pointWS + inDirWS.normalized * enterOffset);
+
+        // flip across plane, then scale in portal plane (x,y) by ratio
+        float scaleRatio = OtherPortal.CurrentScale / CurrentScale;
+        pLocal = Quaternion.AngleAxis(180f, Vector3.up) * pLocal;
+        pLocal.x *= scaleRatio;
+        pLocal.y *= scaleRatio;
+
+        // map out and back off a hair to avoid re-hit
+        Vector3 mapped = outT.TransformPoint(pLocal) - outT.forward * exitBackoff;
+        return mapped;
+    }
+
+    public Vector3 MapDirectionToOther(Vector3 dirWS)
+    {
+        if (OtherPortal == null) return dirWS.normalized;
+
+        Transform inT  = transform;
+        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+
+        Vector3 dLocal = inT.InverseTransformDirection(dirWS).normalized;
+        dLocal = (Quaternion.AngleAxis(180f, Vector3.up) * dLocal);
+        Vector3 mapped = outT.TransformDirection(dLocal).normalized;
+        return mapped;
+    }
+
+    
 }
