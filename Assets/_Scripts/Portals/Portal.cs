@@ -58,8 +58,8 @@ public class Portal : MonoBehaviour
     
     [SerializeField, Range(0.5f, 2f)] private float desiredScale = 1f;
     public float DesiredScale => desiredScale;
-    public float CurrentScale => transform.lossyScale.x;
-    public void SetDesiredScale(float s) => desiredScale = Mathf.Clamp(s, 0.5f, 2f);
+    public float CurrentScale => (ScreenTransform ? ScreenTransform.lossyScale.x : transform.lossyScale.x);
+    public void SetDesiredScale(float s) => desiredScale = Mathf.Clamp(s, 1f, 2f);
 
 
     public bool IsPlaced { get; private set; }
@@ -77,6 +77,15 @@ public class Portal : MonoBehaviour
     float EdgeExtra   => Mathf.Max(Physics.defaultContactOffset, edgeExtraFactor * Mathf.Min(HalfWidth, HalfHeight));
     float FaceOffset  => Mathf.Max(Physics.defaultContactOffset, supportDepthFactor * HalfHeight);
     float ForwardProbe => Mathf.Max(Physics.defaultContactOffset, forwardProbeFactor * HalfHeight);
+    
+    Transform InPlane  => ScreenTransform ? ScreenTransform : transform;
+    Transform OutPlane => OtherPortal && OtherPortal.ScreenTransform 
+        ? OtherPortal.ScreenTransform 
+        : OtherPortal.transform;
+
+    float InScale()  => InPlane.lossyScale.x;
+    float OutScale() => OutPlane.lossyScale.x;
+
 
     void Awake()
     {
@@ -351,42 +360,54 @@ public class Portal : MonoBehaviour
     
     public void GetHalfExtentsForPreview(out float halfW, out float halfH)
     {
-        halfW = HalfWidth; halfH = HalfHeight; // already uses desired vs current
+        halfW = 0.5f * boxCol.size.x * desiredScale;
+        halfH = 0.5f * boxCol.size.y * desiredScale;
     }
     
-    public Vector3 MapPointToOther(Vector3 pointWS, Vector3 inDirWS, float enterOffset = 0.0f, float exitBackoff = 0.06f)
+    public Vector3 MapPointToOther(Vector3 pointWS, Vector3 inDirWS, 
+        float enterOffset = 0.0f, float exitBackoff = 0.06f)
     {
         if (OtherPortal == null) return pointWS;
 
-        Transform inT  = transform;
-        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+        var inT  = InPlane;
+        var outT = OutPlane;
 
-        // localize relative to portal center, step slightly past the screen
-        Vector3 pLocal = inT.InverseTransformPoint(pointWS + inDirWS.normalized * enterOffset);
+        // slight push-through to avoid mapping exactly on the plane
+        Vector3 pInWS = pointWS + inDirWS.normalized * enterOffset;
 
-        // flip across plane, then scale in portal plane (x,y) by ratio
-        float scaleRatio = OtherPortal.CurrentScale / CurrentScale;
-        pLocal = Quaternion.AngleAxis(180f, Vector3.up) * pLocal;
-        pLocal.x *= scaleRatio;
-        pLocal.y *= scaleRatio;
+        // compose M_out * S_xy(r) * HalfTurn * M_in^-1
+        float r = OutScale() / InScale();
+        Matrix4x4 M_in_inv = inT.worldToLocalMatrix;
+        Matrix4x4 HalfTurn = Matrix4x4.Rotate(Quaternion.Euler(0f, 180f, 0f));
+        Matrix4x4 Sxy      = Matrix4x4.Scale(new Vector3(r, r, 1f));
+        Matrix4x4 M_out    = outT.localToWorldMatrix;
 
-        // map out and back off a hair to avoid re-hit
-        Vector3 mapped = outT.TransformPoint(pLocal) - outT.forward * exitBackoff;
-        return mapped;
+        Vector3 pLocalIn  = M_in_inv.MultiplyPoint3x4(pInWS);
+        Vector3 pLocalOut = (Sxy * HalfTurn).MultiplyPoint3x4(pLocalIn);
+        Vector3 mapped    = M_out.MultiplyPoint3x4(pLocalOut);
+
+        // back off a hair to avoid immediate re-hit
+        return mapped - outT.forward * exitBackoff;
     }
+
 
     public Vector3 MapDirectionToOther(Vector3 dirWS)
     {
         if (OtherPortal == null) return dirWS.normalized;
 
-        Transform inT  = transform;
-        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+        var inT  = InPlane;
+        var outT = OutPlane;
 
-        Vector3 dLocal = inT.InverseTransformDirection(dirWS).normalized;
-        dLocal = (Quaternion.AngleAxis(180f, Vector3.up) * dLocal);
-        Vector3 mapped = outT.TransformDirection(dLocal).normalized;
+        Matrix4x4 M_in_inv = inT.worldToLocalMatrix;
+        Matrix4x4 HalfTurn = Matrix4x4.Rotate(Quaternion.Euler(0f, 180f, 0f));
+        Matrix4x4 M_out    = outT.localToWorldMatrix;
+
+        Vector3 dLocalIn  = M_in_inv.MultiplyVector(dirWS).normalized;
+        Vector3 dLocalOut = HalfTurn.MultiplyVector(dLocalIn);
+        Vector3 mapped    = M_out.MultiplyVector(dLocalOut).normalized;
         return mapped;
     }
+
     
     IEnumerator OpenPortal(float dur, float linkLagNorm = 0.15f)
     {

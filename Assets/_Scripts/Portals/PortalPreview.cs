@@ -99,25 +99,10 @@ public class PortalPreview : MonoBehaviour
                 SetInvalid();
                 return;
             }
-            DrawEllipse(finalPos+(hit.normal) * 0.1f, finalRot);
+            finalPos+= hit.normal * (referencePortal.DesiredScale/10f); 
+            DrawEllipse(finalPos, finalRot);
             PublishState(true, hit, finalPos, finalRot);
-            return;
         }
-
-        // Fallback: contorno simple si no hay portal asignado
-        GetHalfExtents(out float halfW, out float halfH);
-        Vector3 center = hit.point + (-hit.normal) * 0.02f; // leve separación hacia fuera de la pared
-        if (blockingMask != 0)
-        {
-            var overlaps = Physics.OverlapBox(center, new Vector3(halfW, halfH, 0.01f), initialRot, blockingMask, QueryTriggerInteraction.Ignore);
-            if (overlaps != null && overlaps.Length > 0)
-            {
-                SetInvalid();
-                return;
-            }
-        }
-        DrawEllipse(center, initialRot);
-        PublishState(true, hit, center, initialRot);
     }
 
     void DrawEllipse(Vector3 center, Quaternion rot)
