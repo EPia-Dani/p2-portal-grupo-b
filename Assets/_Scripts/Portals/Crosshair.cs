@@ -19,8 +19,8 @@ public class Crosshair : MonoBehaviour
     {
         var portals = portalPair.Portals;
 
-        inPortalImg.color = portals[0].PortalColour;
-        outPortalImg.color = portals[1].PortalColour;
+        inPortalImg.color = portals[0].PortalColor;
+        outPortalImg.color = portals[1].PortalColor;
 
         inPortalImg.gameObject.SetActive(false);
         outPortalImg.gameObject.SetActive(false);

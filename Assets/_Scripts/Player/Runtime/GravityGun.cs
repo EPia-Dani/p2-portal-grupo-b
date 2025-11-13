@@ -11,7 +11,7 @@ public class GravityGun : MonoBehaviour
     [SerializeField] private LayerMask portalScreenMask;
     [SerializeField] private LayerMask grabbableMask;
     
-    static readonly Quaternion HalfTurn = Quaternion.Euler(0,180,0);
+    public bool IsGrabbingObject => _grabbedObject != null;
 
     private IGrabbable _grabbedObject;
     
@@ -38,7 +38,8 @@ public class GravityGun : MonoBehaviour
     {
         if (context.started)
         {
-            Shoot();
+            _grabbedObject?.OnThrow(this);
+            _grabbedObject = null;
         }
     }
 
@@ -47,15 +48,6 @@ public class GravityGun : MonoBehaviour
         if (context.started)
         {
             _grabbedObject?.OnRelease();
-            _grabbedObject = null;
-        }
-    }
-    
-    private void Shoot()
-    {
-        if (_grabbedObject != null)
-        {
-            _grabbedObject?.OnThrow(this);
             _grabbedObject = null;
         }
     }

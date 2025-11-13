@@ -16,7 +16,7 @@ public class Portal : MonoBehaviour
     [SerializeField] private GameObject particlePrefab;
     [SerializeField] private Transform particleSpawn;
     private VisualEffect portalParticles;
-    [SerializeField] private Color portalColour = Color.cyan;
+    [SerializeField] private Color portalColor = Color.cyan;
     private Material mat;
     
     public Transform ScreenTransform => screenRenderer != null ? screenRenderer.transform : null;
@@ -59,13 +59,13 @@ public class Portal : MonoBehaviour
     [SerializeField, Range(0.5f, 2f)] private float desiredScale = 1f;
     public float DesiredScale => desiredScale;
     public float CurrentScale => (ScreenTransform ? ScreenTransform.lossyScale.x : transform.lossyScale.x);
-    public void SetDesiredScale(float s) => desiredScale = Mathf.Clamp(s, 1f, 2f);
+    public void SetDesiredScale(float s) => desiredScale = Mathf.Clamp(s, 0.5f, 2f);
 
 
     public bool IsPlaced { get; private set; }
     public Portal OtherPortal => otherPortal;
     public Renderer Renderer => screenRenderer;
-    public Color PortalColour => portalColour;
+    public Color PortalColor => portalColor;
     public Collider WallCollider => wallCollider;
     public GameObject PortalCollider => portalCollider;
 
@@ -86,6 +86,12 @@ public class Portal : MonoBehaviour
     float InScale()  => InPlane.lossyScale.x;
     float OutScale() => OutPlane.lossyScale.x;
 
+    public void GetHalfExtentsForScale(float scale, out float halfW, out float halfH)
+    {
+        var size = boxCol.size;
+        halfW = 0.5f * size.x * scale;
+        halfH = 0.5f * size.y * scale;
+    }
 
     void Awake()
     {
@@ -95,7 +101,7 @@ public class Portal : MonoBehaviour
         if (screenRenderer == null) screenRenderer = GetComponentInChildren<Renderer>(true);
         
         mat = screenRenderer.material;
-        mat.SetColor("_FallbackColor", portalColour);
+        mat.SetColor("_FallbackColor", portalColor);
 
         var go = new GameObject(name + "_TestT");
         go.hideFlags = HideFlags.HideAndDontSave;
@@ -164,46 +170,74 @@ public class Portal : MonoBehaviour
 
     // ==== Single source of truth for placement checks ====
     // Used by PortalPreview via reflection and by PortalPlacement directly.
-    public bool TryComputePlacement(Collider surface, Vector3 hitPoint, Quaternion initialRotation,
+    public bool TryComputePlacement(Collider surface, Vector3 hitPoint, Quaternion initialRotation, float scale,
         out Vector3 finalPosition, out Quaternion finalRotation)
     {
-        finalPosition = default; 
+        finalPosition = default;
         finalRotation = default;
         if (surface == null) return false;
 
-        // 1) Try at the raw hit point
-        if (EvaluateAt(hitPoint, initialRotation, out finalPosition, out finalRotation))
-            return true;
-
-        // 2) Snap to the closest valid point on the wall plane
-        //    Build an orthonormal basis from the desired portal rotation
-        Vector3 fwd = -(initialRotation * Vector3.forward);     // into wall
-        Vector3 right = (initialRotation * Vector3.right);
-        Vector3 up    = (initialRotation * Vector3.up);
-
-        // Safety: keep basis tangent to the wall
-        right = Vector3.Normalize(Vector3.ProjectOnPlane(right, fwd));
-        up    = Vector3.Normalize(Vector3.Cross(fwd, right));
-
-        // Search radius cap: not worth going farther than one portal half-diagonal
-        float maxRadius = Mathf.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight) + EdgeExtra;
-
-        for (int ring = 1; ring <= snapRings; ++ring)
+        var disabled = new List<Collider>();
+        void Disable(Collider c)
         {
-            float r = Mathf.Min(ring * snapStep, maxRadius);
-            for (int i = 0; i < snapAngles; ++i)
+            if (c != null && c.enabled)
             {
-                float theta = (2f * Mathf.PI) * (i / (float)snapAngles);
-                Vector3 offset = right * (r * Mathf.Cos(theta)) + up * (r * Mathf.Sin(theta));
-                Vector3 candidate = hitPoint + offset;
-
-                if (EvaluateAt(candidate, initialRotation, out finalPosition, out finalRotation))
-                    return true;
+                c.enabled = false;
+                disabled.Add(c);
             }
         }
 
-        // No valid pose nearby
-        return false;
+        Disable(boxCol);
+        if (portalCollider != null)
+        {
+            var c = portalCollider.GetComponent<Collider>();
+            Disable(c);
+        }
+        foreach (var c in gameObject.GetComponentsInChildren<Collider>())
+        {
+            Disable(c);
+        }
+
+        try
+        {
+            // basis from rotation
+            Vector3 fwd   = -(initialRotation * Vector3.forward); // into wall
+            Vector3 right =  (initialRotation * Vector3.right);
+            Vector3 up    =  (initialRotation * Vector3.up);
+            right = Vector3.Normalize(Vector3.ProjectOnPlane(right, fwd));
+            up    = Vector3.Normalize(Vector3.Cross(fwd, right));
+
+            // use scale explicitly for radius
+            GetHalfExtentsForScale(scale, out float halfW, out float halfH);
+            float maxRadius = Mathf.Sqrt(halfW * halfW + halfH * halfH) + EdgeExtra;
+
+            // 1) raw hit
+            if (EvaluateAt(hitPoint, initialRotation, out finalPosition, out finalRotation))
+                return true;
+
+            // 2) snap search: early–exit on first success
+            for (int ring = 1; ring <= snapRings; ++ring)
+            {
+                float r = Mathf.Min(ring * snapStep, maxRadius);
+                for (int i = 0; i < snapAngles; ++i)
+                {
+                    float theta = (2f * Mathf.PI) * (i / (float)snapAngles);
+                    Vector3 offset = right * (r * Mathf.Cos(theta)) + up * (r * Mathf.Sin(theta));
+                    Vector3 candidate = hitPoint + offset;
+
+                    if (EvaluateAt(candidate, initialRotation, out finalPosition, out finalRotation))
+                        return true; // <--- important
+                }
+            }
+
+            // nothing worked
+            return false;
+        }
+        finally
+        {
+            foreach (var c in disabled)
+                c.enabled = true;
+        }
     }
 
     // Runs all checks + fixes at a given wall point, returns the committed pose if valid.
@@ -349,7 +383,7 @@ public class Portal : MonoBehaviour
         if (portalParticles != null)
             portalParticles.transform.parent = null;
         transform.SetPositionAndRotation(finalPosition, finalRotation);
-        transform.localScale = new Vector3(desiredScale, desiredScale, 1f);
+        transform.localScale = new Vector3(desiredScale, desiredScale, desiredScale);
         IsPlaced = true;
         if (portalCollider) portalCollider.SetActive(true);
         PlayPlaceSound();

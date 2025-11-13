@@ -31,7 +31,6 @@ public class PortalPreview : MonoBehaviour
 
     LineRenderer lr;
     Vector3[] points;
-    BoxCollider refBox;
 
     void Awake()
     {
@@ -50,12 +49,6 @@ public class PortalPreview : MonoBehaviour
         points = new Vector3[segments];
         lr.positionCount = segments;
         lr.enabled = false;
-
-        // Evita que el preview bloquee el raycast del jugador
-        gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
-
-        if (referencePortal != null)
-            refBox = referencePortal.GetComponent<BoxCollider>();
     }
 
     public void Tick(Vector3 origin, Vector3 dir, LayerMask placementMask)
@@ -93,7 +86,7 @@ public class PortalPreview : MonoBehaviour
         // Ruta principal: usar la lógica unificada del Portal
         if (referencePortal != null)
         {
-            if (!referencePortal.TryComputePlacement(hit.collider, hit.point, initialRot,
+            if (!referencePortal.TryComputePlacement(hit.collider, hit.point, initialRot, referencePortal.DesiredScale,
                                                      out var finalPos, out var finalRot))
             {
                 SetInvalid();
@@ -128,7 +121,7 @@ public class PortalPreview : MonoBehaviour
         // defaults
         halfW = 0.55f; halfH = 1.0f;
         if (referencePortal != null)
-            referencePortal.GetHalfExtentsForPreview(out halfW, out halfH);
+            referencePortal.GetHalfExtentsForScale(referencePortal.DesiredScale, out halfW, out halfH);
     }
 
     void PublishState(bool valid, RaycastHit hit, Vector3 pos, Quaternion rot)
@@ -147,5 +140,11 @@ public class PortalPreview : MonoBehaviour
         IsValid = false;
         Surface = null;
         lr.enabled = false;
+    }
+    
+    public void SetReferencePortal(Portal p)
+    {
+        referencePortal = p;
+        lr.material.color = p.PortalColor;
     }
 }

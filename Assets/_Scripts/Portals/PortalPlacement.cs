@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,6 +9,7 @@ public class PortalPlacement : MonoBehaviour
     [SerializeField] private LayerMask layerMask;
     [SerializeField] private Crosshair crosshair;
     [SerializeField] private Transform lookTransform;
+    [SerializeField] private GravityGun gravityGun;
     
     [Header("Preview")]
     [SerializeField] private PortalPreview portalPreview;
@@ -16,17 +18,33 @@ public class PortalPlacement : MonoBehaviour
     [SerializeField] private bool debugLogs = true;
     
     [SerializeField] private float scrollScaleSensitivity = 0.15f; // per wheel step
+    
+    private bool isPreviewing;
+    private int activePortalIndex = -1;
 
     private void Awake()
     {
         if (lookTransform == null) lookTransform = transform;
         if (portalPreview == null) portalPreview = GetComponent<PortalPreview>(); 
     }
-    
+
+    private void Start()
+    {
+        gravityGun ??= GetComponent<GravityGun>();
+    }
+
     private void LateUpdate()
     {
         if (portalPreview == null) return;
-        portalPreview.Tick(lookTransform.position, lookTransform.forward, layerMask);
+
+        if (isPreviewing)
+        {
+            portalPreview.Tick(lookTransform.position, lookTransform.forward, layerMask);
+        }
+        else
+        {
+            portalPreview.Hide();
+        }
     }
 
     // ===== New Input System (PlayerInput → Invoke Unity Events) =====
@@ -34,8 +52,20 @@ public class PortalPlacement : MonoBehaviour
     {
         if (ctx.started)
         {
-            if (debugLogs) Debug.Log($"[PortalPlacement] FireBlue started. pos={lookTransform.position} dir={lookTransform.forward}");
-            FirePortal(0, lookTransform.position, lookTransform.forward, 250f);
+            if (gravityGun.IsGrabbingObject)
+                return;
+            activePortalIndex = 0;
+            isPreviewing = true;
+            if (portalPreview != null && portals != null)
+                portalPreview.SetReferencePortal(portals.Portals[0]);
+        }
+
+        if (ctx.canceled)
+        {
+            if (gravityGun.IsGrabbingObject)
+                return;
+            TryPlaceActivePortal();
+            isPreviewing = false;
         }
     }
 
@@ -43,31 +73,46 @@ public class PortalPlacement : MonoBehaviour
     {
         if (ctx.started)
         {
-            if (debugLogs) Debug.Log($"[PortalPlacement] FireOrange started. pos={lookTransform.position} dir={lookTransform.forward}");
-            FirePortal(1, lookTransform.position, lookTransform.forward, 250f);            
+            if (gravityGun.IsGrabbingObject)
+                return;
+            activePortalIndex = 1;
+            isPreviewing = true;
+            if (portalPreview != null && portals != null)
+                portalPreview.SetReferencePortal(portals.Portals[1]);
         }
+
+        if (ctx.canceled)
+        {
+            if (gravityGun.IsGrabbingObject)
+                return;
+            TryPlaceActivePortal();
+            isPreviewing = false;
+        }
+    }
+
+    private void TryPlaceActivePortal()
+    {
+        if (portalPreview == null || !portalPreview.IsValid || activePortalIndex < 0)
+            return;
+
+        var target = portals.Portals[activePortalIndex];
+        target.SetDesiredScale(portalPreview.ReferencePortal.DesiredScale);
+        target.PlacePrecomputed(
+            portalPreview.Surface,
+            portalPreview.PreviewPosition,
+            portalPreview.PreviewRotation
+        );
     }
     
     public void OnScalePortal(InputAction.CallbackContext ctx)
     {
-        if (!ctx.performed || portalPreview == null) return;
-        var scroll = ctx.ReadValue<Vector2>().y; // positive = zoom in by default
-        var p = portalPreview.ReferencePortal;   // expose a getter
+        if (!ctx.performed || portalPreview == null || !isPreviewing) return;
+
+        var scroll = ctx.ReadValue<Vector2>().y;
+        var p = portalPreview.ReferencePortal;
         if (p == null) return;
+
         p.SetDesiredScale(p.DesiredScale + scroll * scrollScaleSensitivity);
     }
 
-    private void FirePortal(int portalID, Vector3 pos, Vector3 dir, float distance)
-    {
-        // If preview is valid, place directly from its precomputed pose
-        if (portalPreview != null && portalPreview.IsValid && portalPreview.Surface != null)
-        {
-            portals.Portals[portalID].SetDesiredScale(portalPreview.ReferencePortal.DesiredScale);
-            portals.Portals[portalID].PlacePrecomputed(
-                portalPreview.Surface,
-                portalPreview.PreviewPosition,
-                portalPreview.PreviewRotation
-            );
-        }
-    }
 }
