@@ -26,7 +26,18 @@ public class Portal : MonoBehaviour
     [SerializeField] private GameObject portalCollider;   // trigger in the opening
 
     [Header("Masks")]
-    [SerializeField] private LayerMask placementMask;
+    [SerializeField] private LayerMask placementMask; // valid surfaces and both portal layers
+    
+    LayerMask EffectiveMask
+    {
+        get
+        {
+            int mask = placementMask;
+            int selfLayer = gameObject.layer;
+            mask &= ~(1 << selfLayer);   // clear own layer bit
+            return mask;
+        }
+    }
 
     [Header("Placement")]
     [SerializeField, Range(0.02f, 0.2f)] private float supportDepthFactor = 0.08f;
@@ -168,8 +179,12 @@ public class Portal : MonoBehaviour
         portalable.ExitPortal();
     }
 
-    // ==== Single source of truth for placement checks ====
-    // Used by PortalPreview via reflection and by PortalPlacement directly.
+
+    /// <summary>
+    /// Attempts to compute a valid portal placement on the given surface at the given hit point and
+    /// initial rotation. If successful, returns true and outputs the final position and rotation.
+    /// If not successful, returns false.
+    /// </summary>
     public bool TryComputePlacement(Collider surface, Vector3 hitPoint, Quaternion initialRotation, float scale,
         out Vector3 finalPosition, out Quaternion finalRotation)
     {
@@ -186,16 +201,11 @@ public class Portal : MonoBehaviour
                 disabled.Add(c);
             }
         }
-
-        Disable(boxCol);
         if (portalCollider != null)
         {
-            var c = portalCollider.GetComponent<Collider>();
-            Disable(c);
-        }
-        foreach (var c in gameObject.GetComponentsInChildren<Collider>())
-        {
-            Disable(c);
+            var c = portalCollider.GetComponents<Collider>();
+            foreach (var col in c)
+                Disable(col);
         }
 
         try
@@ -226,11 +236,9 @@ public class Portal : MonoBehaviour
                     Vector3 candidate = hitPoint + offset;
 
                     if (EvaluateAt(candidate, initialRotation, out finalPosition, out finalRotation))
-                        return true; // <--- important
+                        return true;
                 }
             }
-
-            // nothing worked
             return false;
         }
         finally
@@ -271,7 +279,7 @@ public class Portal : MonoBehaviour
     bool HasFrontSurface()
     {
         Vector3 origin = testT.position - testT.forward * FaceOffset;
-        return Physics.Raycast(origin, testT.forward, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore);
+        return Physics.Raycast(origin, testT.forward, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore);
     }
 
     void FixOverhangs()
@@ -293,7 +301,7 @@ public class Portal : MonoBehaviour
             Vector3 start = testT.position + rim - testT.forward * FaceOffset;
             float maxDist = clampMove * 2f;
 
-            if (Physics.SphereCast(start, EdgeExtra, testT.forward, out var hit, maxDist, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(start, EdgeExtra, testT.forward, out var hit, maxDist, EffectiveMask, QueryTriggerInteraction.Ignore))
             {
                 Vector3 delta = hit.point - (start + testT.forward * EdgeExtra);
                 float move = Mathf.Min(delta.magnitude, clampMove);
@@ -311,7 +319,7 @@ public class Portal : MonoBehaviour
         Vector3 a = testT.position - testT.up * (HalfHeight - r) - testT.forward * slab;
         Vector3 b = testT.position + testT.up * (HalfHeight - r) - testT.forward * slab;
 
-        var cols = Physics.OverlapCapsule(a, b, r, placementMask, QueryTriggerInteraction.Ignore);
+        var cols = Physics.OverlapCapsule(a, b, r, EffectiveMask, QueryTriggerInteraction.Ignore);
         if (cols.Length == 0) return;
 
         // Pull OUT of the wall, not into it
@@ -339,7 +347,7 @@ public class Portal : MonoBehaviour
         {
             float t = (i + 0.5f) / samples;
             Vector3 p0 = EllipsePerimeterPointWorld(t, -FaceOffset);
-            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore))
                 hits++;
         }
         float cov = hits / (float)samples;
@@ -362,7 +370,7 @@ public class Portal : MonoBehaviour
         foreach (var lp in local)
         {
             Vector3 p0 = testT.TransformPoint(lp);
-            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore))
                 ok++;
         }
         return ok >= minCount;

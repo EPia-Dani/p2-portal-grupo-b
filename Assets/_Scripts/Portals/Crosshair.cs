@@ -1,40 +1,51 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-
+[DisallowMultipleComponent]
 public class Crosshair : MonoBehaviour
 {
-    [SerializeField]
-    private PortalPair portalPair;
+    [Header("Placement Source")]
+    [SerializeField] private PortalPlacement placement;
 
-    [SerializeField]
-    private Image inPortalImg;
+    [Header("UI")]
+    [Tooltip("Base reticle always visible (no colors).")]
+    [SerializeField] private Image baseImg;
+    [Tooltip("Overlay for the blue portal indicator.")]
+    [SerializeField] private Image blueImg;
+    [Tooltip("Overlay for the orange portal indicator.")]
+    [SerializeField] private Image orangeImg;
 
-    [SerializeField]
-    private Image outPortalImg;
-
-    private void Start()
+    public void SetPlacement(PortalPlacement p)
     {
-        var portals = portalPair.Portals;
-
-        inPortalImg.color = portals[0].PortalColor;
-        outPortalImg.color = portals[1].PortalColor;
-
-        inPortalImg.gameObject.SetActive(false);
-        outPortalImg.gameObject.SetActive(false);
+        placement = p;
     }
 
-    public void SetPortalPlaced(int portalID, bool isPlaced)
+    private void Update()
     {
-        if(portalID == 0)
+        if (placement == null)
         {
-            inPortalImg.gameObject.SetActive(isPlaced);
+            ApplyState(false, false);
+            return;
         }
-        else
-        {
-            outPortalImg.gameObject.SetActive(isPlaced);
-        }
+
+        var aim = placement.Aim;
+
+        // If there's no valid hit, both are false
+        bool canBlue   = aim.hasHit && aim.canBlue;
+        bool canOrange = aim.hasHit && aim.canOrange;
+
+        ApplyState(canBlue, canOrange);
+    }
+
+    private void ApplyState(bool canBlue, bool canOrange)
+    {
+        if (baseImg != null)
+            baseImg.enabled = true;
+
+        if (blueImg != null)
+            blueImg.enabled = canBlue;
+
+        if (orangeImg != null)
+            orangeImg.enabled = canOrange;
     }
 }
