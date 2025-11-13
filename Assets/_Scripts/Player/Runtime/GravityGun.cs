@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -82,9 +83,9 @@ public class GravityGun : MonoBehaviour
     private const float EPS = 0.01f;
 
     private bool TraceHoldRay(bool collectPoints, out Vector3 holdPos, out Quaternion holdRot,
-                              out System.Collections.Generic.List<Vector3> points)
+                              out List<Vector3> points)
     {
-        points = collectPoints ? new System.Collections.Generic.List<Vector3>(8) : null;
+        points = collectPoints ? new List<Vector3>(8) : null;
 
         Transform camT = playerCamera ? playerCamera.transform : transform;
         Vector3 o = camT.position;
@@ -98,10 +99,8 @@ public class GravityGun : MonoBehaviour
 
         for (int hops = 0; hops < MaxHops; hops++)
         {
-            // Nearest-hit wins among solids and portal screens
             if (!Physics.Raycast(o, d, out var hit, remaining, combinedMask, QueryTriggerInteraction.Collide))
             {
-                // nothing within remaining distance
                 Vector3 end = o + d * remaining;
                 if (collectPoints) points.Add(end);
                 holdPos = end;
@@ -133,7 +132,7 @@ public class GravityGun : MonoBehaviour
                 q = Quaternion.LookRotation(fW.normalized, uW);
 
                 if (collectPoints) points.Add(o);
-                continue; // keep tracing with remaining distance
+                continue;
             }
 
             // Solid hit first → place hold here

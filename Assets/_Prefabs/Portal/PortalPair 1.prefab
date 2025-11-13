@@ -41,9 +41,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6472848782087386672}
   - component: {fileID: 5246556022672459039}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: PortalPair 1
-  m_TagString: Untagged
+  m_TagString: Portal
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -86,7 +86,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3938460859780408733}
-  m_Layer: 10
+  m_Layer: 11
   m_Name: VFX_Spawn
   m_TagString: Portal
   m_Icon: {fileID: 0}
@@ -124,7 +124,7 @@ PrefabInstance:
     - target: {fileID: 664118883922512056, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: m_Layer
-      value: 9
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 664118883922512056, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
@@ -194,7 +194,12 @@ PrefabInstance:
     - target: {fileID: 6770361252576951411, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 11
+      objectReference: {fileID: 0}
+    - target: {fileID: 6770361252576951411, guid: bdf60b69a6e12bb4dae103af40f99737,
+        type: 3}
+      propertyPath: m_TagString
+      value: Portal
       objectReference: {fileID: 0}
     - target: {fileID: 7250774004495952361, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
@@ -320,7 +325,7 @@ PrefabInstance:
         type: 3}
       propertyPath: placeSound
       value: 
-      objectReference: {fileID: 8300000, guid: d9c3f83f055fbb84e850348fd247fd19, type: 3}
+      objectReference: {fileID: 8300000, guid: d092c2697bbe31a44b80c48143ae8e2e, type: 3}
     - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: otherPortal
@@ -380,7 +385,7 @@ PrefabInstance:
     - target: {fileID: 9067242991802004286, guid: bdf60b69a6e12bb4dae103af40f99737,
         type: 3}
       propertyPath: placementMask.m_Bits
-      value: 64
+      value: 1600
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -459,7 +464,12 @@ PrefabInstance:
     - target: {fileID: 302251378378202141, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 302251378378202141, guid: fcde9addb6824604d9f18f9b4bf64a18,
+        type: 3}
+      propertyPath: m_TagString
+      value: Portal
       objectReference: {fileID: 0}
     - target: {fileID: 351319078482543723, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
@@ -745,7 +755,7 @@ PrefabInstance:
     - target: {fileID: 6184478784001617053, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}
       propertyPath: placementMask.m_Bits
-      value: 64
+      value: 10304
       objectReference: {fileID: 0}
     - target: {fileID: 6471193028264012432, guid: fcde9addb6824604d9f18f9b4bf64a18,
         type: 3}

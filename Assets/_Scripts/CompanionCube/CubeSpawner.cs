@@ -1,5 +1,6 @@
 // CubeSpawner.cs
 
+using System;
 using System.Collections;
 using _Scripts.Interfaces;
 using UnityEngine;
@@ -36,6 +37,11 @@ namespace _Scripts.CompanionCube
             if (tween != null) StopCoroutine(tween);
             tween = StartCoroutine(TweenState(0f)); // spawn check happens when we fully close
             if (audioClip) AudioSource.PlayClipAtPoint(audioClip, transform.position);
+        }
+
+        private void Start()
+        {
+            TrySpawnCube();
         }
 
         IEnumerator TweenState(float target)
