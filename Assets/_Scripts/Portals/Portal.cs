@@ -15,9 +15,9 @@ public class Portal : MonoBehaviour
     [SerializeField] private Renderer screenRenderer;
     [SerializeField] private GameObject particlePrefab;
     [SerializeField] private Transform particleSpawn;
-    private VisualEffect portalParticles;
+    private VisualEffect _portalParticles;
     [SerializeField] private Color portalColor = Color.cyan;
-    private Material mat;
+    private Material _mat;
     
     public Transform ScreenTransform => screenRenderer != null ? screenRenderer.transform : null;
 
@@ -65,7 +65,7 @@ public class Portal : MonoBehaviour
     private BoxCollider boxCol;
     private Transform testT;
     
-    private readonly List<PortalableBase> _portalables = new();
+    private List<PortalableBase> _portalables = new();
     
     [SerializeField, Range(0.5f, 2f)] private float desiredScale = 1f;
     public float DesiredScale => desiredScale;
@@ -80,7 +80,7 @@ public class Portal : MonoBehaviour
     public Collider WallCollider => wallCollider;
     public GameObject PortalCollider => portalCollider;
 
-// replace the existing HalfWidth/HalfHeight props
+    // replace the existing HalfWidth/HalfHeight props
     float ScaleForChecks => IsPlaced ? transform.lossyScale.x : desiredScale;
     float HalfWidth  => 0.5f * boxCol.size.x * ScaleForChecks;
     float HalfHeight => 0.5f * boxCol.size.y * ScaleForChecks;
@@ -111,8 +111,8 @@ public class Portal : MonoBehaviour
 
         if (screenRenderer == null) screenRenderer = GetComponentInChildren<Renderer>(true);
         
-        mat = screenRenderer.material;
-        mat.SetColor("_FallbackColor", portalColor);
+        _mat = screenRenderer.material;
+        _mat.SetColor("_FallbackColor", portalColor);
 
         var go = new GameObject(name + "_TestT");
         go.hideFlags = HideFlags.HideAndDontSave;
@@ -128,9 +128,12 @@ public class Portal : MonoBehaviour
     {
         if (!IsPlaced) return;
         
+        if (_portalables.Count == 0) return;
+        
         foreach (var p in _portalables)
         {
             if (p == null) continue;
+            if (!p.IsInPortal(this)) continue;
             if (p.HasCrossedPlane(this) && OtherPortal != null)
             {
                 PlayEnterSound();
@@ -388,8 +391,8 @@ public class Portal : MonoBehaviour
     {
         if (surface == null) return;
         wallCollider = surface;
-        if (portalParticles != null)
-            portalParticles.transform.parent = null;
+        if (_portalParticles != null)
+            _portalParticles.transform.parent = null;
         transform.SetPositionAndRotation(finalPosition, finalRotation);
         transform.localScale = new Vector3(desiredScale, desiredScale, desiredScale);
         IsPlaced = true;
@@ -450,29 +453,36 @@ public class Portal : MonoBehaviour
         return mapped;
     }
 
+    public void GladosOnlyOpenPortal()
+    {
+        IsPlaced = true;
+        StartCoroutine(OpenPortal(0.5f));
+        if (OtherPortal.IsPlaced)
+            StartCoroutine(OtherPortal.OpenPortal(0.5f));
+    }
     
     IEnumerator OpenPortal(float dur, float linkLagNorm = 0.15f)
     {
         // particles (unchanged)
-        portalParticles?.SendEvent("Deactivate");
-        Destroy(portalParticles?.gameObject, 2f);
-        portalParticles = null;
+        _portalParticles?.SendEvent("Deactivate");
+        Destroy(_portalParticles?.gameObject, 2f);
+        _portalParticles = null;
 
         // props reset
-        mat.SetFloat("_LinkedPortalValid", 0f);
-        mat.SetFloat("_Link", 0f);
-        mat.SetFloat("_LinkAmount", 0f); // if older material still reads this
+        _mat.SetFloat("_LinkedPortalValid", 0f);
+        _mat.SetFloat("_Link", 0f);
+        _mat.SetFloat("_LinkAmount", 0f); // if older material still reads this
 
-        if (portalParticles == null && particlePrefab != null)
+        if (_portalParticles == null && particlePrefab != null)
         {
             var go = Instantiate(particlePrefab, particleSpawn);
-            portalParticles = go.GetComponent<VisualEffect>();
+            _portalParticles = go.GetComponent<VisualEffect>();
         }
-        portalParticles?.SendEvent("Activate");
+        _portalParticles?.SendEvent("Activate");
 
         // decide link state once at start
         bool hasLink = (OtherPortal != null && OtherPortal.IsPlaced);
-        if (hasLink) mat.SetFloat("_LinkedPortalValid", 1f);
+        if (hasLink) _mat.SetFloat("_LinkedPortalValid", 1f);
 
         float t = 0f;
         while (t < dur)
@@ -485,32 +495,32 @@ public class Portal : MonoBehaviour
 
             // outer opening
             float open = Ease(x);
-            mat.SetFloat("_Open", open);
+            _mat.SetFloat("_Open", open);
 
             // link aperture lags behind by linkLagNorm of the timeline
             float xLink = Mathf.Clamp01((x - linkLagNorm) / (1f - linkLagNorm));
             float link = hasLink ? Ease(xLink) : 0f;
 
             // write both property names for compatibility
-            mat.SetFloat("_Link", link);
-            mat.SetFloat("_LinkAmount", link);
+            _mat.SetFloat("_Link", link);
+            _mat.SetFloat("_LinkAmount", link);
 
             yield return null;
         }
 
         // final clamp
-        mat.SetFloat("_Open", 1f);
+        _mat.SetFloat("_Open", 1f);
         if (hasLink)
         {
-            mat.SetFloat("_LinkedPortalValid", 1f);
-            mat.SetFloat("_Link", 1f);
-            mat.SetFloat("_LinkAmount", 1f);
+            _mat.SetFloat("_LinkedPortalValid", 1f);
+            _mat.SetFloat("_Link", 1f);
+            _mat.SetFloat("_LinkAmount", 1f);
         }
         else
         {
-            mat.SetFloat("_LinkedPortalValid", 0f);
-            mat.SetFloat("_Link", 0f);
-            mat.SetFloat("_LinkAmount", 0f);
+            _mat.SetFloat("_LinkedPortalValid", 0f);
+            _mat.SetFloat("_Link", 0f);
+            _mat.SetFloat("_LinkAmount", 0f);
         }
     }
     

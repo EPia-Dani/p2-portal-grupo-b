@@ -95,5 +95,17 @@ namespace _Scripts.CompanionCube
                 Gizmos.DrawWireSphere(capsule.bounds.center, Mathf.Max(capsule.bounds.extents.x, capsule.bounds.extents.y, capsule.bounds.extents.z));
             }
         }
+
+        public void SpawnCube()
+        {
+            StartCoroutine(OpenAndClose());
+        }
+
+        IEnumerator OpenAndClose()
+        {
+            OnButtonPressed();
+            yield return new WaitForSeconds(transitionDuration + 0.2f);
+            OnButtonReleased();
+        }
     }
 }

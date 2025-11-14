@@ -79,12 +79,12 @@ public class Button : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             state = Mathf.Lerp(startState, endState, elapsed / pressDuration);
-            animator.SetFloat("PressState", state);
+            animator?.SetFloat("PressState", state);
             yield return null;
         }
 
         state = endState;
-        animator.SetFloat("PressState", state);
+        animator?.SetFloat("PressState", state);
         pressCoroutine = null;
     }
     

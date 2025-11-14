@@ -121,6 +121,11 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
 
     // Subclasses provide the collider used for Physics.IgnoreCollision
     protected abstract Collider GetMainCollider();
+
+    public bool IsInPortal(Portal portal)
+    {
+        return portal != null && inPortal == portal;
+    }
 }
 
 }
