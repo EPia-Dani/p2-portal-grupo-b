@@ -14,7 +14,7 @@ namespace _Scripts.Player.Runtime
         private CharacterController _cc;
         private Vector2 _moveInput;   // x: sides, y: forward
         private float _verticalVel;
-        private float MAX_FALL_SPEED = -20f;
+        private float MAX_FALL_SPEED = -30f;
         private bool _canRun = true;
         private bool _running;
         private bool _crouching;
@@ -26,7 +26,7 @@ namespace _Scripts.Player.Runtime
         public Vector2 MovementDirection => new (_cc.velocity.x, _cc.velocity.z);
         public bool IsGrounded => _grounded;
         
-        [SerializeField] private LayerMask groundMask = ~0;
+        [SerializeField] private LayerMask portalMask = ~0;
 
         void Awake()
         {
@@ -113,7 +113,7 @@ namespace _Scripts.Player.Runtime
 
             if ((flags & CollisionFlags.Below) != 0)
             {
-                bool realGround = IsGroundedOnNonPortal();
+                bool realGround = !IsGroundedOnPortal();
                 if (realGround)
                 {
                     _grounded = true;
@@ -139,14 +139,13 @@ namespace _Scripts.Player.Runtime
                 _externalVelocity = Vector3.MoveTowards(_externalVelocity, Vector3.zero, externalFriction * dt);
         }
         
-        private bool IsGroundedOnNonPortal()
+        private bool IsGroundedOnPortal()
         {
             Vector3 origin = transform.position + Vector3.up * 0.1f;
-            float dist = 4f;
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, dist, groundMask, QueryTriggerInteraction.Collide))
+            float dist = 5f;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, dist, portalMask, QueryTriggerInteraction.Collide))
             {
-                if (hit.collider.GetComponentInParent<Portal>() != null) return false;
-                return true;
+                if (hit.collider.CompareTag("Portal")) return true;
             }
             return false;
         }

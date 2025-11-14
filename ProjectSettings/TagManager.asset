@@ -16,11 +16,11 @@ TagManager:
   - PortalSurface
   - Player
   - PlayerGhost
-  - PortalScreen
+  - BluePortalScreen
   - BluePortal
   - OrangePortal
   - LaserMask
-  - 
+  - OrangePortalScreen
   - 
   - 
   - 

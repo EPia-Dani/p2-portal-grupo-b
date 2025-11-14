@@ -61,8 +61,9 @@ public class Turret : MonoBehaviour, IDamageable {
     float _startY;
     [Header("Debug")]
     [SerializeField] bool debugLogs = false;
-    // once the turret trips, it should panic once and then disable itself
     bool _tripped = false;
+    
+    [SerializeField] GrabbableBase grabbable;
 
     void Start(){
         if (!target) target = GameObject.FindGameObjectWithTag("Player")?.transform;
@@ -71,19 +72,18 @@ public class Turret : MonoBehaviour, IDamageable {
         _startY = transform.position.y;
         if (tracer != null) tracer.enabled = false;
         if (muzzle2 != null && tracer2 != null) tracer2.enabled = false;
-
-        // instantiate the emission material if assigned
+        
+        if (!grabbable)
+            grabbable = GetComponent<GrabbableBase>();
+        
         if (emissiveRenderer != null){
             if (emissionMaterial != null){
                 _matInstance = Instantiate(emissionMaterial);
                 emissiveRenderer.material = _matInstance;
             } else {
-                // fallback to renderer's shared material
                 _matInstance = emissiveRenderer.material;
             }
-            // ensure emission keyword is enabled so emissive color is visible
             _matInstance.EnableKeyword("_EMISSION");
-            // set initial emission color/intensity
             _matInstance.SetColor("_EmissionColor", emissionColor * emissionIntensity);
             _currentEmission = emissionIntensity;
         }
@@ -91,7 +91,10 @@ public class Turret : MonoBehaviour, IDamageable {
 
     void Update(){
         if (state == State.Dead) return;
-        if (_tripped) return; // once tripped, stop regular Update behaviour
+        if (grabbable != null && grabbable.IsGrabbed){
+            HandleHeldFire();
+            return;
+        }
         if (IsTipped()){ SetState(State.Disabled); return; }
 
         switch(state){
@@ -113,10 +116,20 @@ public class Turret : MonoBehaviour, IDamageable {
                 TryFire();
                 break;
             case State.Disabled:
-                // stays down until righted or destroyed
                 break;
         }
     }
+    
+    void HandleHeldFire(){
+        // fire at same cadence as usual, but always forward
+        if (Time.time < nextFire) return;
+        nextFire = Time.time + 1f / fireRate;
+
+        FireFromMuzzle(muzzle, tracer, bulletSpreadDeg);
+        if (muzzle2 != null)
+            FireFromMuzzle(muzzle2, tracer2, bulletSpreadDeg);
+    }
+
 
     bool InWakeRange(){
         if (!target) return false;
@@ -186,15 +199,20 @@ public class Turret : MonoBehaviour, IDamageable {
     // Fires a single ray from the given muzzle with given spread in degrees
     void FireFromMuzzle(Transform muzz, LineRenderer tr, float spreadDeg){
         if (muzz == null) return;
+        bool held = grabbable != null && grabbable.IsGrabbed;
+
         Vector3 dir;
-        if (target != null){
+        if (held){
+            // when held by the gravity gun, always shoot straight forward
+            dir = muzz.forward;
+        } else if (target != null){
             dir = Vector3.Normalize(target.position - muzz.position);
         } else {
             dir = muzz.forward;
         }
         // apply random spread
-        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), headPivot.up) * dir;
-        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), barrelPivot.right) * dir;
+        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), muzz.up) * dir;
+        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), muzz.right) * dir;
 
         // apply recoil: impulse opposite to shot direction
         if (_rb != null && !_rb.isKinematic){
@@ -213,7 +231,6 @@ public class Turret : MonoBehaviour, IDamageable {
             var dmg = hit.collider.GetComponentInParent<IDamageable>();
             if (dmg != null) dmg.ApplyDamage(bulletDamage, hit.point, hit.normal);
         } else {
-            // still show tracer to max distance
             if (tr){
                 ShowTracer(tr, muzz.position, muzz.position + dir * maxFireDist);
             }
@@ -260,6 +277,7 @@ public class Turret : MonoBehaviour, IDamageable {
     }
 
     public void ApplyDamage(float dmg, Vector3 p, Vector3 n){
+        _rb.AddForceAtPosition(-n * dmg/2,p, ForceMode.VelocityChange);
         if (state == State.Dead) return;
         health -= dmg;
         if (health <= 0f){ Die(); }
@@ -279,6 +297,7 @@ public class Turret : MonoBehaviour, IDamageable {
         state = s;
         switch(s){
             case State.Sleep:
+            case State.Dead:
                 if (tracer != null) tracer.enabled = false;
                 if (tracer2 != null) tracer2.enabled = false;
                 // fade out emission if applicable
@@ -380,11 +399,9 @@ public class Turret : MonoBehaviour, IDamageable {
     }
 
     void Die(){
-        state = State.Dead;
+        SetState(State.Dead);
         if (tracer != null) tracer.enabled = false;
         if (tracer2 != null) tracer2.enabled = false;
-        foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
-        enabled = false;
     }
 
 }

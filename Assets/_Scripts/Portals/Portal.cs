@@ -16,7 +16,7 @@ public class Portal : MonoBehaviour
     [SerializeField] private GameObject particlePrefab;
     [SerializeField] private Transform particleSpawn;
     private VisualEffect portalParticles;
-    [SerializeField] private Color portalColour = Color.cyan;
+    [SerializeField] private Color portalColor = Color.cyan;
     private Material mat;
     
     public Transform ScreenTransform => screenRenderer != null ? screenRenderer.transform : null;
@@ -26,7 +26,18 @@ public class Portal : MonoBehaviour
     [SerializeField] private GameObject portalCollider;   // trigger in the opening
 
     [Header("Masks")]
-    [SerializeField] private LayerMask placementMask;
+    [SerializeField] private LayerMask placementMask; // valid surfaces and both portal layers
+    
+    LayerMask EffectiveMask
+    {
+        get
+        {
+            int mask = placementMask;
+            int selfLayer = gameObject.layer;
+            mask &= ~(1 << selfLayer);   // clear own layer bit
+            return mask;
+        }
+    }
 
     [Header("Placement")]
     [SerializeField, Range(0.02f, 0.2f)] private float supportDepthFactor = 0.08f;
@@ -58,14 +69,14 @@ public class Portal : MonoBehaviour
     
     [SerializeField, Range(0.5f, 2f)] private float desiredScale = 1f;
     public float DesiredScale => desiredScale;
-    public float CurrentScale => transform.lossyScale.x;
+    public float CurrentScale => (ScreenTransform ? ScreenTransform.lossyScale.x : transform.lossyScale.x);
     public void SetDesiredScale(float s) => desiredScale = Mathf.Clamp(s, 0.5f, 2f);
 
 
     public bool IsPlaced { get; private set; }
     public Portal OtherPortal => otherPortal;
     public Renderer Renderer => screenRenderer;
-    public Color PortalColour => portalColour;
+    public Color PortalColor => portalColor;
     public Collider WallCollider => wallCollider;
     public GameObject PortalCollider => portalCollider;
 
@@ -77,6 +88,21 @@ public class Portal : MonoBehaviour
     float EdgeExtra   => Mathf.Max(Physics.defaultContactOffset, edgeExtraFactor * Mathf.Min(HalfWidth, HalfHeight));
     float FaceOffset  => Mathf.Max(Physics.defaultContactOffset, supportDepthFactor * HalfHeight);
     float ForwardProbe => Mathf.Max(Physics.defaultContactOffset, forwardProbeFactor * HalfHeight);
+    
+    Transform InPlane  => ScreenTransform ? ScreenTransform : transform;
+    Transform OutPlane => OtherPortal && OtherPortal.ScreenTransform 
+        ? OtherPortal.ScreenTransform 
+        : OtherPortal.transform;
+
+    float InScale()  => InPlane.lossyScale.x;
+    float OutScale() => OutPlane.lossyScale.x;
+
+    public void GetHalfExtentsForScale(float scale, out float halfW, out float halfH)
+    {
+        var size = boxCol.size;
+        halfW = 0.5f * size.x * scale;
+        halfH = 0.5f * size.y * scale;
+    }
 
     void Awake()
     {
@@ -86,7 +112,7 @@ public class Portal : MonoBehaviour
         if (screenRenderer == null) screenRenderer = GetComponentInChildren<Renderer>(true);
         
         mat = screenRenderer.material;
-        mat.SetColor("_FallbackColor", portalColour);
+        mat.SetColor("_FallbackColor", portalColor);
 
         var go = new GameObject(name + "_TestT");
         go.hideFlags = HideFlags.HideAndDontSave;
@@ -153,48 +179,73 @@ public class Portal : MonoBehaviour
         portalable.ExitPortal();
     }
 
-    // ==== Single source of truth for placement checks ====
-    // Used by PortalPreview via reflection and by PortalPlacement directly.
-    public bool TryComputePlacement(Collider surface, Vector3 hitPoint, Quaternion initialRotation,
+
+    /// <summary>
+    /// Attempts to compute a valid portal placement on the given surface at the given hit point and
+    /// initial rotation. If successful, returns true and outputs the final position and rotation.
+    /// If not successful, returns false.
+    /// </summary>
+    public bool TryComputePlacement(Collider surface, Vector3 hitPoint, Quaternion initialRotation, float scale,
         out Vector3 finalPosition, out Quaternion finalRotation)
     {
-        finalPosition = default; 
+        finalPosition = default;
         finalRotation = default;
         if (surface == null) return false;
 
-        // 1) Try at the raw hit point
-        if (EvaluateAt(hitPoint, initialRotation, out finalPosition, out finalRotation))
-            return true;
-
-        // 2) Snap to the closest valid point on the wall plane
-        //    Build an orthonormal basis from the desired portal rotation
-        Vector3 fwd = -(initialRotation * Vector3.forward);     // into wall
-        Vector3 right = (initialRotation * Vector3.right);
-        Vector3 up    = (initialRotation * Vector3.up);
-
-        // Safety: keep basis tangent to the wall
-        right = Vector3.Normalize(Vector3.ProjectOnPlane(right, fwd));
-        up    = Vector3.Normalize(Vector3.Cross(fwd, right));
-
-        // Search radius cap: not worth going farther than one portal half-diagonal
-        float maxRadius = Mathf.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight) + EdgeExtra;
-
-        for (int ring = 1; ring <= snapRings; ++ring)
+        var disabled = new List<Collider>();
+        void Disable(Collider c)
         {
-            float r = Mathf.Min(ring * snapStep, maxRadius);
-            for (int i = 0; i < snapAngles; ++i)
+            if (c != null && c.enabled)
             {
-                float theta = (2f * Mathf.PI) * (i / (float)snapAngles);
-                Vector3 offset = right * (r * Mathf.Cos(theta)) + up * (r * Mathf.Sin(theta));
-                Vector3 candidate = hitPoint + offset;
-
-                if (EvaluateAt(candidate, initialRotation, out finalPosition, out finalRotation))
-                    return true;
+                c.enabled = false;
+                disabled.Add(c);
             }
         }
+        if (portalCollider != null)
+        {
+            var c = portalCollider.GetComponents<Collider>();
+            foreach (var col in c)
+                Disable(col);
+        }
 
-        // No valid pose nearby
-        return false;
+        try
+        {
+            // basis from rotation
+            Vector3 fwd   = -(initialRotation * Vector3.forward); // into wall
+            Vector3 right =  (initialRotation * Vector3.right);
+            Vector3 up    =  (initialRotation * Vector3.up);
+            right = Vector3.Normalize(Vector3.ProjectOnPlane(right, fwd));
+            up    = Vector3.Normalize(Vector3.Cross(fwd, right));
+
+            // use scale explicitly for radius
+            GetHalfExtentsForScale(scale, out float halfW, out float halfH);
+            float maxRadius = Mathf.Sqrt(halfW * halfW + halfH * halfH) + EdgeExtra;
+
+            // 1) raw hit
+            if (EvaluateAt(hitPoint, initialRotation, out finalPosition, out finalRotation))
+                return true;
+
+            // 2) snap search: early–exit on first success
+            for (int ring = 1; ring <= snapRings; ++ring)
+            {
+                float r = Mathf.Min(ring * snapStep, maxRadius);
+                for (int i = 0; i < snapAngles; ++i)
+                {
+                    float theta = (2f * Mathf.PI) * (i / (float)snapAngles);
+                    Vector3 offset = right * (r * Mathf.Cos(theta)) + up * (r * Mathf.Sin(theta));
+                    Vector3 candidate = hitPoint + offset;
+
+                    if (EvaluateAt(candidate, initialRotation, out finalPosition, out finalRotation))
+                        return true;
+                }
+            }
+            return false;
+        }
+        finally
+        {
+            foreach (var c in disabled)
+                c.enabled = true;
+        }
     }
 
     // Runs all checks + fixes at a given wall point, returns the committed pose if valid.
@@ -228,7 +279,7 @@ public class Portal : MonoBehaviour
     bool HasFrontSurface()
     {
         Vector3 origin = testT.position - testT.forward * FaceOffset;
-        return Physics.Raycast(origin, testT.forward, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore);
+        return Physics.Raycast(origin, testT.forward, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore);
     }
 
     void FixOverhangs()
@@ -250,7 +301,7 @@ public class Portal : MonoBehaviour
             Vector3 start = testT.position + rim - testT.forward * FaceOffset;
             float maxDist = clampMove * 2f;
 
-            if (Physics.SphereCast(start, EdgeExtra, testT.forward, out var hit, maxDist, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(start, EdgeExtra, testT.forward, out var hit, maxDist, EffectiveMask, QueryTriggerInteraction.Ignore))
             {
                 Vector3 delta = hit.point - (start + testT.forward * EdgeExtra);
                 float move = Mathf.Min(delta.magnitude, clampMove);
@@ -268,7 +319,7 @@ public class Portal : MonoBehaviour
         Vector3 a = testT.position - testT.up * (HalfHeight - r) - testT.forward * slab;
         Vector3 b = testT.position + testT.up * (HalfHeight - r) - testT.forward * slab;
 
-        var cols = Physics.OverlapCapsule(a, b, r, placementMask, QueryTriggerInteraction.Ignore);
+        var cols = Physics.OverlapCapsule(a, b, r, EffectiveMask, QueryTriggerInteraction.Ignore);
         if (cols.Length == 0) return;
 
         // Pull OUT of the wall, not into it
@@ -296,7 +347,7 @@ public class Portal : MonoBehaviour
         {
             float t = (i + 0.5f) / samples;
             Vector3 p0 = EllipsePerimeterPointWorld(t, -FaceOffset);
-            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore))
                 hits++;
         }
         float cov = hits / (float)samples;
@@ -319,7 +370,7 @@ public class Portal : MonoBehaviour
         foreach (var lp in local)
         {
             Vector3 p0 = testT.TransformPoint(lp);
-            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, placementMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(p0, rProbe, testT.forward, out _, ForwardProbe, EffectiveMask, QueryTriggerInteraction.Ignore))
                 ok++;
         }
         return ok >= minCount;
@@ -340,7 +391,7 @@ public class Portal : MonoBehaviour
         if (portalParticles != null)
             portalParticles.transform.parent = null;
         transform.SetPositionAndRotation(finalPosition, finalRotation);
-        transform.localScale = new Vector3(desiredScale, desiredScale, 1f);
+        transform.localScale = new Vector3(desiredScale, desiredScale, desiredScale);
         IsPlaced = true;
         if (portalCollider) portalCollider.SetActive(true);
         PlayPlaceSound();
@@ -351,42 +402,54 @@ public class Portal : MonoBehaviour
     
     public void GetHalfExtentsForPreview(out float halfW, out float halfH)
     {
-        halfW = HalfWidth; halfH = HalfHeight; // already uses desired vs current
+        halfW = 0.5f * boxCol.size.x * desiredScale;
+        halfH = 0.5f * boxCol.size.y * desiredScale;
     }
     
-    public Vector3 MapPointToOther(Vector3 pointWS, Vector3 inDirWS, float enterOffset = 0.0f, float exitBackoff = 0.06f)
+    public Vector3 MapPointToOther(Vector3 pointWS, Vector3 inDirWS, 
+        float enterOffset = 0.0f, float exitBackoff = 0.06f)
     {
         if (OtherPortal == null) return pointWS;
 
-        Transform inT  = transform;
-        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+        var inT  = InPlane;
+        var outT = OutPlane;
 
-        // localize relative to portal center, step slightly past the screen
-        Vector3 pLocal = inT.InverseTransformPoint(pointWS + inDirWS.normalized * enterOffset);
+        // slight push-through to avoid mapping exactly on the plane
+        Vector3 pInWS = pointWS + inDirWS.normalized * enterOffset;
 
-        // flip across plane, then scale in portal plane (x,y) by ratio
-        float scaleRatio = OtherPortal.CurrentScale / CurrentScale;
-        pLocal = Quaternion.AngleAxis(180f, Vector3.up) * pLocal;
-        pLocal.x *= scaleRatio;
-        pLocal.y *= scaleRatio;
+        // compose M_out * S_xy(r) * HalfTurn * M_in^-1
+        float r = OutScale() / InScale();
+        Matrix4x4 M_in_inv = inT.worldToLocalMatrix;
+        Matrix4x4 HalfTurn = Matrix4x4.Rotate(Quaternion.Euler(0f, 180f, 0f));
+        Matrix4x4 Sxy      = Matrix4x4.Scale(new Vector3(r, r, 1f));
+        Matrix4x4 M_out    = outT.localToWorldMatrix;
 
-        // map out and back off a hair to avoid re-hit
-        Vector3 mapped = outT.TransformPoint(pLocal) - outT.forward * exitBackoff;
-        return mapped;
+        Vector3 pLocalIn  = M_in_inv.MultiplyPoint3x4(pInWS);
+        Vector3 pLocalOut = (Sxy * HalfTurn).MultiplyPoint3x4(pLocalIn);
+        Vector3 mapped    = M_out.MultiplyPoint3x4(pLocalOut);
+
+        // back off a hair to avoid immediate re-hit
+        return mapped - outT.forward * exitBackoff;
     }
+
 
     public Vector3 MapDirectionToOther(Vector3 dirWS)
     {
         if (OtherPortal == null) return dirWS.normalized;
 
-        Transform inT  = transform;
-        Transform outT = OtherPortal.ScreenTransform ? OtherPortal.ScreenTransform : OtherPortal.transform;
+        var inT  = InPlane;
+        var outT = OutPlane;
 
-        Vector3 dLocal = inT.InverseTransformDirection(dirWS).normalized;
-        dLocal = (Quaternion.AngleAxis(180f, Vector3.up) * dLocal);
-        Vector3 mapped = outT.TransformDirection(dLocal).normalized;
+        Matrix4x4 M_in_inv = inT.worldToLocalMatrix;
+        Matrix4x4 HalfTurn = Matrix4x4.Rotate(Quaternion.Euler(0f, 180f, 0f));
+        Matrix4x4 M_out    = outT.localToWorldMatrix;
+
+        Vector3 dLocalIn  = M_in_inv.MultiplyVector(dirWS).normalized;
+        Vector3 dLocalOut = HalfTurn.MultiplyVector(dLocalIn);
+        Vector3 mapped    = M_out.MultiplyVector(dLocalOut).normalized;
         return mapped;
     }
+
     
     IEnumerator OpenPortal(float dur, float linkLagNorm = 0.15f)
     {

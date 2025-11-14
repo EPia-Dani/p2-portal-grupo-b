@@ -43,6 +43,10 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
 
     // collision tracking: when > 0 the object is colliding
     int collisionCount = 0;
+    
+    public bool IsGrabbed => isGrabbed;
+    public GravityGun HoldingGun => holdingGun;
+
 
     void Awake()
     {
@@ -92,7 +96,7 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     public void OnThrow(GravityGun gravityGun)
     {
         Vector3 throwDir = hasTargetPose ? (targetRot * Vector3.forward).normalized
-            : transform.forward;
+            : gravityGun.transform.forward;
         float throwSpeed = 5f;
         OnRelease();
         rb.linearVelocity = storedVel + throwDir * throwSpeed;
