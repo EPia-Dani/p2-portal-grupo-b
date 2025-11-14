@@ -1,3 +1,4 @@
+using System.Collections;
 using _Scripts.Player.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,11 +21,22 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
-
-
+    
     public void PlayerDied()
     {
         Debug.Log("Player has died. Restarting level...");
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (!playerIsDead)
+        {
+            playerIsDead = true;
+            StartCoroutine(LevelRestartCoroutine());
+        }
     }
+    
+    IEnumerator LevelRestartCoroutine()
+    {
+        yield return new WaitForSeconds(2f); // Optional delay before restart
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        playerIsDead = false;
+    }
+    
 }

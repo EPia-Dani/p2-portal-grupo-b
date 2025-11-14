@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace _Scripts.Player.Runtime
 {
-    public class PlayerHealth : MonoBehaviour, IDamageable, ICanDie {
+    public class PlayerHealth : MonoBehaviour, ICanDie, IDamageable  {
         [SerializeField] float maxHP = 100f;
         float hp;
         public static Action<float> OnTakeDamage;
@@ -37,6 +37,8 @@ namespace _Scripts.Player.Runtime
 
         public void Die()
         {
+            Debug.Log("Player Died!");
+            OnTakeDamage?.Invoke(0f);
             GameManager.Instance?.PlayerDied();
         }
     }

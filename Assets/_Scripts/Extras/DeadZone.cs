@@ -1,4 +1,4 @@
-using Unity.VisualScripting;
+using _Scripts.Interfaces;
 using UnityEngine;
 
 namespace _Scripts.Extras
@@ -20,11 +20,8 @@ namespace _Scripts.Extras
         
         private void OnTriggerEnter(Collider other)
         {
-            ICanDie actor = other.GetComponent<ICanDie>();
-            if (actor != null)
-            {
-                actor.Die();
-            }
-        }    
+            Debug.Log("DeadZone triggered by: " + other.name);
+            other.GetComponent<ICanDie>()?.Die();
+        }
     }
 }

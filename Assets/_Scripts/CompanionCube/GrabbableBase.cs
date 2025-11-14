@@ -9,7 +9,7 @@ public class GrabbableBase : MonoBehaviour, IGrabbable
     [Header("Follow (spring)")]
     [SerializeField] float springStrength = 40f;    // higher = snappier pull
     [SerializeField] float springDamping = 8f;      // higher = less oscillation
-    [SerializeField] float maxFollowSpeed = 20f;    // clamp speed
+    [SerializeField] float maxFollowSpeed = 40f;    // clamp speed
 
     [Header("Rotation (angular spring)")]
     [SerializeField] float rotationStrength = 40f;  // angular stiffness

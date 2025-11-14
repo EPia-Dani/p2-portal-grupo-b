@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   springStrength: 40
   springDamping: 8
-  maxFollowSpeed: 20
+  maxFollowSpeed: 40
   rotationStrength: 40
   rotationDamping: 6
   maxAngularSpeed: 40
