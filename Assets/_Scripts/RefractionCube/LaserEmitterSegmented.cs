@@ -29,7 +29,7 @@ public class LaserEmitterSegmented : MonoBehaviour
             if (!segmentTemplate)
                 segmentTemplate = gameObject.AddComponent<LineRenderer>();
         }
-        segmentTemplate.enabled = false; // used only for cloning
+        segmentTemplate.enabled = false;
         if (hitSparksPrefab)
         {
             _hitSparks = Instantiate(hitSparksPrefab);
@@ -113,6 +113,12 @@ public class LaserEmitterSegmented : MonoBehaviour
             
             if (hit.collider.TryGetComponent<ILaserReceiver>(out var receiver))
                 receiver.LaserHit(hit.point, hit.normal, Time.frameCount);
+            
+            if (hit.collider.GetComponent<IDamageable>() != null)
+            {
+                // apply damage
+                hit.collider.GetComponent<IDamageable>()?.ApplyDamage(25f * Time.deltaTime, hit.point, hit.normal);
+            }
             
             break;
         }

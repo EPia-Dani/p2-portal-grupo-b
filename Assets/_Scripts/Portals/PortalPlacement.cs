@@ -39,9 +39,6 @@ public class PortalPlacement : MonoBehaviour
     [Header("Scroll Scaling")]
     [SerializeField] private float scrollScaleSensitivity = 0.15f; // per wheel step
 
-    [Header("Debug")]
-    [SerializeField] private bool debugLogs = true;
-
     private bool isPreviewing;
     private int activePortalIndex = -1;
 

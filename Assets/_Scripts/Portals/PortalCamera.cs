@@ -129,5 +129,6 @@ public class PortalCamera : MonoBehaviour
         UniversalRenderPipeline.RenderSingleCamera(SRC, portalCamera);
         
         #pragma warning restore CS0618
+        
     }
 }

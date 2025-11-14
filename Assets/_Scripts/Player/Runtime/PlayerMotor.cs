@@ -78,7 +78,6 @@ namespace _Scripts.Player.Runtime
                 _grounded = false;
                 if(audioSource.isPlaying)
                     audioSource.Stop();
-                audioSource?.PlayOneShot(config.jumpClip);
                 animator.SetTrigger("Jump");
             }
         }

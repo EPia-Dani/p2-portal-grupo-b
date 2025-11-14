@@ -44,6 +44,11 @@ public class Turret : MonoBehaviour, IDamageable {
     [SerializeField] Color emissionColor = Color.red;
     [SerializeField] float emissionIntensity = 1f;
     [SerializeField] float sleepFadeDuration = 1f;
+    
+    [Header("Vision Line")]
+    [SerializeField] LineRenderer visionLine;   // straight "eye" line
+    [SerializeField] float visionLength = 25f;  // how far the eye can see
+
 
     // runtime emission instance
     Material _matInstance;
@@ -73,6 +78,8 @@ public class Turret : MonoBehaviour, IDamageable {
         if (tracer != null) tracer.enabled = false;
         if (muzzle2 != null && tracer2 != null) tracer2.enabled = false;
         
+        if (visionLine != null) visionLine.enabled = false;
+        
         if (!grabbable)
             grabbable = GetComponent<GrabbableBase>();
         
@@ -90,9 +97,14 @@ public class Turret : MonoBehaviour, IDamageable {
     }
 
     void Update(){
-        if (state == State.Dead) return;
+        if (state == State.Dead)
+        {
+            UpdateVisionLine();
+            return;
+        }
         if (grabbable != null && grabbable.IsGrabbed){
             HandleHeldFire();
+            UpdateVisionLine();
             return;
         }
         if (IsTipped()){ SetState(State.Disabled); return; }
@@ -118,7 +130,43 @@ public class Turret : MonoBehaviour, IDamageable {
             case State.Disabled:
                 break;
         }
+        UpdateVisionLine();
     }
+    
+    void UpdateVisionLine(){
+        if (visionLine == null){
+            return;
+        }
+
+        // Only show when the turret is "alive"
+        if (state == State.Dead || state == State.Sleep){
+            visionLine.enabled = false;
+            return;
+        }
+
+        // If the headPivot is not set, we can't draw a proper eye line
+        if (headPivot == null){
+            visionLine.enabled = false;
+            return;
+        }
+
+        Vector3 origin = headPivot.position;
+        Vector3 dir    = headPivot.forward;
+
+        // Vision uses the same sightMask as bullets
+        if (Physics.Raycast(origin, dir, out var hit, visionLength, sightMask, QueryTriggerInteraction.Ignore)){
+            visionLine.enabled = true;
+            visionLine.positionCount = 2;
+            visionLine.SetPosition(0, origin);
+            visionLine.SetPosition(1, hit.point);
+        } else {
+            visionLine.enabled = true;
+            visionLine.positionCount = 2;
+            visionLine.SetPosition(0, origin);
+            visionLine.SetPosition(1, origin + dir * visionLength);
+        }
+    }
+
     
     void HandleHeldFire(){
         // fire at same cadence as usual, but always forward
@@ -163,18 +211,50 @@ public class Turret : MonoBehaviour, IDamageable {
     }
 
     void AimAtTarget(){
-        if (!target) return;
-        Vector3 localDir = headPivot.InverseTransformDirection((target.position + Vector3.up*0.9f - headPivot.position).normalized);
-        // Yaw
-        float yaw = Mathf.Atan2(localDir.x, localDir.z) * Mathf.Rad2Deg;
-        headPivot.localRotation = Quaternion.RotateTowards(headPivot.localRotation, Quaternion.Euler(0, yaw, 0), yawSpeed*Time.deltaTime);
-        // Pitch
-        Vector3 dirWorld = (target.position + Vector3.up*0.9f - barrelPivot.position).normalized;
-        float pitch = -Mathf.Asin(dirWorld.y) * Mathf.Rad2Deg;
+        if (!target || headPivot == null || barrelPivot == null) return;
+
+        // ---------- YAW ----------
+        // Work in the space of the head's parent so yaw is relative to the base
+        Transform yawParent = headPivot.parent != null ? headPivot.parent : headPivot;
+        Vector3 toTargetWorld = (target.position + Vector3.up * 0.9f - headPivot.position);
+        if (toTargetWorld.sqrMagnitude < 0.0001f) return;
+
+        Vector3 toLocal = yawParent.InverseTransformDirection(toTargetWorld.normalized);
+
+        // Flatten direction on parent's up to get pure yaw
+        Vector3 flat = new Vector3(toLocal.x, 0f, toLocal.z);
+        if (flat.sqrMagnitude > 0.0001f){
+            flat.Normalize();
+            float yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
+            Quaternion targetYawLocal = Quaternion.Euler(0f, yaw, 0f);
+            Quaternion newYaw = Quaternion.RotateTowards(
+                headPivot.localRotation,
+                targetYawLocal,
+                yawSpeed * Time.deltaTime
+            );
+            headPivot.localRotation = newYaw;
+        }
+
+        // ---------- PITCH ----------
+        // Use the barrel's parent to compute pitch so we tilt around local X
+        Transform pitchParent = barrelPivot.parent != null ? barrelPivot.parent : barrelPivot;
+        Vector3 toTargetWorldPitch = (target.position + Vector3.up * 0.9f - barrelPivot.position);
+        if (toTargetWorldPitch.sqrMagnitude < 0.0001f) return;
+
+        Vector3 toLocalPitch = pitchParent.InverseTransformDirection(toTargetWorldPitch.normalized);
+        // Pitch is angle between local forward and target direction around local X
+        float pitch = Mathf.Asin(Mathf.Clamp(-toLocalPitch.y, -1f, 1f)) * Mathf.Rad2Deg;
         pitch = Mathf.Clamp(pitch, pitchClamp.x, pitchClamp.y);
-        var targetPitch = Quaternion.Euler(pitch, 0, 0);
-        barrelPivot.localRotation = Quaternion.RotateTowards(barrelPivot.localRotation, targetPitch, pitchSpeed*Time.deltaTime);
+
+        Quaternion targetPitchLocal = Quaternion.Euler(pitch, 0f, 0f);
+        Quaternion newPitch = Quaternion.RotateTowards(
+            barrelPivot.localRotation,
+            targetPitchLocal,
+            pitchSpeed * Time.deltaTime
+        );
+        barrelPivot.localRotation = newPitch;
     }
+
 
     bool InFireRange(){
         // consider both muzzles if available, otherwise fallback to single muzzle
