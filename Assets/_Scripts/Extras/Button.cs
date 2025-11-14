@@ -5,7 +5,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
-public class Button : MonoBehaviour
+public class Button : MonoBehaviour, IGladosNotifier
 {
 
     [SerializeField]
@@ -13,6 +13,12 @@ public class Button : MonoBehaviour
     
     [SerializeField]
     private float pressDuration = 0.4f;
+    
+    [SerializeField]
+    private GameObject gladosObject;
+    private IGlados glados;
+    
+    private bool notifiedGlados = false;
     
     [SerializeField]
     private MonoBehaviour target;
@@ -46,6 +52,15 @@ public class Button : MonoBehaviour
             if (pressCoroutine != null)
                 StopCoroutine(pressCoroutine);
             pressCoroutine = StartCoroutine(PressState(true));
+            if (!notifiedGlados && gladosObject != null)
+            {
+                glados = gladosObject.GetComponent<IGlados>();
+                if (glados != null)
+                {
+                    notifiedGlados = true;
+                    NotifyGlados();
+                }
+            }
         }
         if (inside.Count == 1)
         {
@@ -87,6 +102,10 @@ public class Button : MonoBehaviour
         animator?.SetFloat("PressState", state);
         pressCoroutine = null;
     }
-    
-    
+
+
+    public void NotifyGlados()
+    {
+        glados?.StartNextSequence();
+    }
 }

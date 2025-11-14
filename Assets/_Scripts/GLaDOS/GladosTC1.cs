@@ -16,6 +16,7 @@ namespace _Scripts.GLaDOS
         [SerializeField] private Transform initialPlayerSpawn;
         [SerializeField] private AudioClip[] gladosIntroLines;
         [SerializeField] private AudioClip[] gladosCubeSpawnLines;
+        [SerializeField] private AudioClip[] gladosCompletionLines;
         [SerializeField] private CubeSpawner cubeSpawner;
         [SerializeField] private DoorBase firstDoor;
         [SerializeField] private Portal[] startingPortals;
@@ -96,12 +97,26 @@ namespace _Scripts.GLaDOS
                     StartCoroutine(CubeSpawnSequence());
                     break;
                 case 2:
-                    PlayGLaDOSIntroLine(3); // Example line for sequence 2
+                    StartCoroutine(CompleteionSequence());
                     break;
                 default:
                     Debug.Log("No more sequences.");
                     break;
             }
+        }
+
+        private IEnumerator CompleteionSequence()
+        {
+            for (int i = 0; i < gladosCompletionLines.Length; i++)
+            {
+                if (gladosCompletionLines[i] != null)
+                {
+                    _audioSource.clip = gladosCompletionLines[i];
+                    _audioSource.Play();
+                    yield return new WaitForSeconds(gladosCompletionLines[i].length + 1f);
+                }
+            }
+            Debug.Log("GLaDOS Completion Sequence Finished.");
         }
 
         private IEnumerator CubeSpawnSequence()
