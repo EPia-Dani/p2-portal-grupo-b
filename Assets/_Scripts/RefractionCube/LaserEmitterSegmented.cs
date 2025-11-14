@@ -91,6 +91,7 @@ public class LaserEmitterSegmented : MonoBehaviour
             if (hit.collider.TryGetComponent<ILaserRedirector>(out var redirector)
                 && redirector.TryRedirect(ray, hit, out var outRay))
             {
+                redirector.Activate(Time.frameCount);
                 CommitSegment(segmentPoints);                     // finish segment to redirector
                 BeginSegment(segmentPoints, outRay.origin);       // start new from redirect point
                 ray = new Ray(outRay.origin + outRay.direction.normalized * surfaceOffset,
@@ -112,8 +113,7 @@ public class LaserEmitterSegmented : MonoBehaviour
             
             if (hit.collider.TryGetComponent<ILaserReceiver>(out var receiver))
                 receiver.LaserHit(hit.point, hit.normal, Time.frameCount);
-
-            // Absorb
+            
             break;
         }
 

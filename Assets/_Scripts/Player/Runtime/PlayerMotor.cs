@@ -15,7 +15,7 @@ namespace _Scripts.Player.Runtime
         private Vector2 _moveInput;   // x: sides, y: forward
         private float _verticalVel;
         private float MAX_FALL_SPEED = -30f;
-        private bool _canRun = true;
+        private bool _canRun = false; // In Portal you can only run in certain areas
         private bool _running;
         private bool _crouching;
         private bool _grounded;

@@ -120,13 +120,13 @@ namespace _Scripts.GLaDOS
         }
 
         private IEnumerator CubeSpawnSequence()
-        {
+        {            
+            cubeSpawner.SpawnCube();
             for (int i = 0; i < gladosIntroLines.Length; i++)
             {
                 PlayGLaDOSCubeSpawnLine(i);
                 yield return new WaitForSeconds(gladosIntroLines[i].length + 1f);
             }
-            cubeSpawner.SpawnCube();
         }
     }
 }

@@ -104,7 +104,7 @@ namespace _Scripts.CompanionCube
         IEnumerator OpenAndClose()
         {
             OnButtonPressed();
-            yield return new WaitForSeconds(transitionDuration + 0.2f);
+            yield return new WaitForSeconds(transitionDuration + 0.5f);
             OnButtonReleased();
         }
     }

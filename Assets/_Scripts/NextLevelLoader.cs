@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class NextLevelLoader : MonoBehaviour
@@ -22,7 +23,7 @@ public class NextLevelLoader : MonoBehaviour
         }
     }
     
-    private System.Collections.IEnumerator LoadNextLevel()
+    private IEnumerator LoadNextLevel()
     {
         if (animator != null)
         {

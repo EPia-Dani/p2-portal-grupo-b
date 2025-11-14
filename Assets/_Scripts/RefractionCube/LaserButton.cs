@@ -29,13 +29,23 @@ namespace _Scripts.RefractionCube
 
             if (!isPressed && shouldBePressed)
             {
-                action?.OnButtonPressed(); // same semantics as Button
+                action?.OnButtonPressed();
                 isPressed = true;
             }
             else if (isPressed && !shouldBePressed)
             {
                 action?.OnButtonReleased();
                 isPressed = false;
+            }
+            else
+            {
+                isPressed = shouldBePressed;
+                if (!isPressed)
+                    action?.OnButtonReleased();
+                else
+                {
+                    action?.OnButtonPressed();
+                }
             }
         }
 

@@ -118,7 +118,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4387061646475312653}
   - component: {fileID: 6614912240577332086}
-  - component: {fileID: 1657077376911330964}
+  - component: {fileID: 6811385069946742220}
   m_Layer: 0
   m_Name: PortalDoor
   m_TagString: Untagged
@@ -136,7 +136,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 19.886414, y: -13.750452, z: 14.003495}
-  m_LocalScale: {x: 0.94107, y: 0.94107, z: 0.94107}
+  m_LocalScale: {x: 0.94107, y: 0.94107, z: 0.84020615}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1960613830543826261}
@@ -156,10 +156,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c1067705e064f94da9debc98f890b9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  doorAnimator: {fileID: 1657077376911330964}
+  doorAnimator: {fileID: 6811385069946742220}
   audioClip: {fileID: 0}
   openDuration: 0.5
---- !u!95 &1657077376911330964
+--- !u!95 &6811385069946742220
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0

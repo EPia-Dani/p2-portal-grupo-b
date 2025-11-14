@@ -75,7 +75,7 @@ public class GravityGun : MonoBehaviour
     void LateUpdate() {
         if (_grabbedObject == null) return;
         if (TryGetPortalAwareHoldPose(out var p, out var r)) {
-            _grabbedObject.SetTargetPose(p, r); // grabbable handles interpolation
+            _grabbedObject.SetTargetPose(p, r);
         }
     }
     
@@ -134,14 +134,12 @@ public class GravityGun : MonoBehaviour
                 if (collectPoints) points.Add(o);
                 continue;
             }
-
-            // Solid hit first → place hold here
+            
             holdPos = hit.point;
             holdRot = q;
             return true;
         }
-
-        // Fallback after hop cap
+        
         Vector3 fallback = o + d * remaining;
         if (collectPoints) points.Add(fallback);
         holdPos = fallback;
