@@ -110,7 +110,7 @@ public class Portal : MonoBehaviour
         boxCol.isTrigger = true;
 
         if (screenRenderer == null) screenRenderer = GetComponentInChildren<Renderer>(true);
-        
+
         _mat = screenRenderer.material;
         _mat.SetColor("_FallbackColor", portalColor);
 

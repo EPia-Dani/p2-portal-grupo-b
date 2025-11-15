@@ -1,487 +1,228 @@
 using _Scripts.Interfaces;
-using System.Collections;
 using UnityEngine;
-public class Turret : MonoBehaviour, IDamageable {
-    [Header("Refs")]
-    [SerializeField] Transform headPivot, barrelPivot, muzzle;
-    [SerializeField] Transform muzzle2; // added second muzzle
-    [SerializeField] LayerMask sightMask;      // World | Player | Grabbable
-    [SerializeField] Transform target;         // assign Player at runtime
-    [Header("Detect")]
-    [SerializeField] float wakeRadius = 12f;
-    [SerializeField] float fovDeg = 60f;
-    [SerializeField] float maxTrackDist = 20f;
-    [SerializeField] float losCheckInterval = 0.05f;
-    [Header("Aim")]
-    [SerializeField] float yawSpeed = 240f;
-    [SerializeField] float pitchSpeed = 180f;
-    [SerializeField] Vector2 pitchClamp = new(-20, 45);
-    [Header("Fire")]
-    [SerializeField] float fireRate = 12f;     // rounds/sec
-    [SerializeField] float bulletDamage = 5f;
-    [SerializeField] float bulletSpreadDeg = 0.6f;
-    [SerializeField] float extraSpreadMultiplier = 8f; // used during panic
-    [SerializeField] float maxFireDist = 30f;
-    [SerializeField] LineRenderer tracer;      // optional (muzzle 1)
-    [SerializeField] LineRenderer tracer2;     // optional (muzzle 2)
-    [Header("Recoil")]
-    [SerializeField] float recoilForce = 2f; // impulse applied per shot (tweak to taste)
-    [SerializeField] bool useForceAtPosition = false; // if true apply AddForceAtPosition, otherwise AddForce at COM
-    [Header("Stability")]
-    [SerializeField] float tipDisableAngle = 40f; // if tipped over
-    [SerializeField] float health = 40f;
 
-    // panic settings
-    [SerializeField] float panicDuration = 2f; // seconds to fire randomly after tipping
-    [SerializeField] float tipHeightDrop = 0.2f; // if root drops this much from start, consider tipped
-    [SerializeField] float tipAngularVelocity = 3f; // if rigidbody angular vel exceeds this, consider tipped
-
-    [Header("Visual")]
-    [Tooltip("Renderer that contains an emissive material. If assigned, the material will be instanced and controlled by the turret.")]
-    [SerializeField] Renderer emissiveRenderer;
-    [Tooltip("Optional material to assign to the renderer on Start (instanced). If left empty the renderer's material will be used.")]
-    [SerializeField] Material emissionMaterial;
-    [SerializeField] Color emissionColor = Color.red;
-    [SerializeField] float emissionIntensity = 1f;
-    [SerializeField] float sleepFadeDuration = 1f;
-    
-    [Header("Vision Line")]
-    [SerializeField] LineRenderer visionLine;   // straight "eye" line
-    [SerializeField] float visionLength = 25f;  // how far the eye can see
-
-
-    // runtime emission instance
-    Material _matInstance;
-    float _currentEmission = 1f; // 0..1
-    Coroutine _emissionCoroutine;
-
-    enum State { Sleep, Search, Track, Fire, Disabled, Dead }
-    State state = State.Sleep;
-    float nextFire, losTimer;
-
-    Coroutine panicCoroutine;
-
-    Rigidbody _rb;
-    Vector3 _startUp;
-    float _startY;
-    [Header("Debug")]
-    [SerializeField] bool debugLogs = false;
-    bool _tripped = false;
-    
-    [SerializeField] GrabbableBase grabbable;
-
-    void Start(){
-        if (!target) target = GameObject.FindGameObjectWithTag("Player")?.transform;
-        _rb = GetComponent<Rigidbody>() ?? GetComponentInParent<Rigidbody>();
-        _startUp = transform.up;
-        _startY = transform.position.y;
-        if (tracer != null) tracer.enabled = false;
-        if (muzzle2 != null && tracer2 != null) tracer2.enabled = false;
-        
-        if (visionLine != null) visionLine.enabled = false;
-        
-        if (!grabbable)
-            grabbable = GetComponent<GrabbableBase>();
-        
-        if (emissiveRenderer != null){
-            if (emissionMaterial != null){
-                _matInstance = Instantiate(emissionMaterial);
-                emissiveRenderer.material = _matInstance;
-            } else {
-                _matInstance = emissiveRenderer.material;
-            }
-            _matInstance.EnableKeyword("_EMISSION");
-            _matInstance.SetColor("_EmissionColor", emissionColor * emissionIntensity);
-            _currentEmission = emissionIntensity;
-        }
+[RequireComponent(typeof(LineRenderer), typeof(AudioSource))]
+public class Turret : MonoBehaviour, IDamageable
+{
+    private enum TurretState
+    {
+        Idle,
+        Scanning,
+        Firing,
+        PickedUpFiring,
+        PanicDisabled
     }
 
-    void Update(){
-        if (state == State.Dead)
+    [Header("References")]
+    [SerializeField] private Transform eye;       // Where the vision ray starts
+    [SerializeField] private Transform firePoint; // Where bullets/rays come from
+
+    [Header("Vision")]
+    [SerializeField] private float viewDistance = 20f;
+    [SerializeField] private LayerMask visionMask; // Walls + Player layer
+
+    [Header("Shooting")]
+    [SerializeField] private float fireRate = 10f; // shots per second
+
+    [Header("Tipping")]
+    [SerializeField] private float tippedAngle = 60f; // degrees from upright to be "tipped"
+
+    [Header("Sounds (per state)")]
+    [SerializeField] private AudioClip idleStateSfx;
+    [SerializeField] private AudioClip scanningStateSfx;
+    [SerializeField] private AudioClip firingStateSfx;
+    [SerializeField] private AudioClip pickedUpStateSfx;
+    [SerializeField] private AudioClip panicSfx;          // used for PanicDisabled state
+    [SerializeField] private AudioClip damageSfx;
+
+    [Header("Sounds (per action)")]
+    [SerializeField] private AudioClip shootSfx;          // per shot, not per state
+
+    private LineRenderer _line;
+    private AudioSource _audio;
+    private float _fireTimer;
+    private bool _isPickedUp;
+    private bool _isDisabled;
+    private bool _shotThisFrame;
+
+    private GrabbableBase _grabbable;
+    private TurretState _state = TurretState.Idle;
+
+    private void Awake()
+    {
+        _line = GetComponent<LineRenderer>();
+        _audio = GetComponent<AudioSource>();
+        _grabbable = GetComponent<GrabbableBase>();
+
+        _line.positionCount = 2;
+
+        if (eye == null)
+            eye = transform;
+        if (firePoint == null)
+            firePoint = eye;
+    }
+
+    private void Update()
+    {
+        _shotThisFrame = false;
+
+        if (_isDisabled)
         {
-            UpdateVisionLine();
-            return;
-        }
-        if (grabbable != null && grabbable.IsGrabbed){
-            HandleHeldFire();
-            UpdateVisionLine();
-            return;
-        }
-        if (IsTipped()){ SetState(State.Disabled); return; }
-
-        switch(state){
-            case State.Sleep:
-                if (InWakeRange()) SetState(State.Search);
-                break;
-            case State.Search:
-                if (CanSeeTarget()) SetState(State.Track);
-                else if (!InWakeRange()) SetState(State.Sleep);
-                break;
-            case State.Track:
-                AimAtTarget();
-                if (!InSightCone() || !HasLOS()) { SetState(State.Search); break; }
-                if (InFireRange()) SetState(State.Fire);
-                break;
-            case State.Fire:
-                AimAtTarget();
-                if (!InSightCone() || !HasLOS() || !InFireRange()) { SetState(State.Track); break; }
-                TryFire();
-                break;
-            case State.Disabled:
-                break;
-        }
-        UpdateVisionLine();
-    }
-    
-    void UpdateVisionLine(){
-        if (visionLine == null){
+            _line.enabled = false;
+            SetState(TurretState.PanicDisabled);
             return;
         }
 
-        // Only show when the turret is "alive"
-        if (state == State.Dead || state == State.Sleep){
-            visionLine.enabled = false;
+        // If tipped, panic + disable
+        if (IsTippedOver())
+        {
+            PanicAndDisable();
             return;
         }
 
-        // If the headPivot is not set, we can't draw a proper eye line
-        if (headPivot == null){
-            visionLine.enabled = false;
-            return;
+        _line.enabled = true;
+
+        _isPickedUp = _grabbable != null && _grabbable.IsGrabbed;
+
+        DoVisionAndShoot(firePoint.position, firePoint.forward, _isPickedUp);
+
+        // Decide state based on what happened this frame
+        if (_isDisabled)
+        {
+            SetState(TurretState.PanicDisabled);
         }
-
-        Vector3 origin = headPivot.position;
-        Vector3 dir    = headPivot.forward;
-
-        // Vision uses the same sightMask as bullets
-        if (Physics.Raycast(origin, dir, out var hit, visionLength, sightMask, QueryTriggerInteraction.Ignore)){
-            visionLine.enabled = true;
-            visionLine.positionCount = 2;
-            visionLine.SetPosition(0, origin);
-            visionLine.SetPosition(1, hit.point);
-        } else {
-            visionLine.enabled = true;
-            visionLine.positionCount = 2;
-            visionLine.SetPosition(0, origin);
-            visionLine.SetPosition(1, origin + dir * visionLength);
+        else if (_isPickedUp)
+        {
+            // When held, we consider it always in "picked up firing" mode
+            SetState(TurretState.PickedUpFiring);
         }
-    }
-
-    
-    void HandleHeldFire(){
-        // fire at same cadence as usual, but always forward
-        if (Time.time < nextFire) return;
-        nextFire = Time.time + 1f / fireRate;
-
-        FireFromMuzzle(muzzle, tracer, bulletSpreadDeg);
-        if (muzzle2 != null)
-            FireFromMuzzle(muzzle2, tracer2, bulletSpreadDeg);
-    }
-
-
-    bool InWakeRange(){
-        if (!target) return false;
-        return Vector3.SqrMagnitude(target.position - transform.position) <= wakeRadius*wakeRadius;
-    }
-
-    bool InSightCone(){
-        if (!target) return false;
-        Vector3 to = (target.position - headPivot.position);
-        float dist = to.magnitude;
-        if (dist > maxTrackDist) return false;
-        to /= dist;
-        return Vector3.Angle(headPivot.forward, to) <= fovDeg*0.5f;
-    }
-
-    bool CanSeeTarget(){
-        return InSightCone() && HasLOS();
-    }
-
-    bool HasLOS(){
-        losTimer -= Time.deltaTime;
-        if (losTimer > 0f) return true; // use last result
-        losTimer = losCheckInterval;
-        if (!target) return false;
-        var origin = barrelPivot.position;
-        var dir = (target.position + Vector3.up*0.9f - origin).normalized;
-        if (Physics.Raycast(origin, dir, out var hit, maxTrackDist, sightMask, QueryTriggerInteraction.Ignore)){
-            return hit.collider.CompareTag("Player");
+        else if (_shotThisFrame)
+        {
+            SetState(TurretState.Firing);
         }
-        return false;
-    }
-
-    void AimAtTarget(){
-        if (!target || headPivot == null || barrelPivot == null) return;
-
-        // ---------- YAW ----------
-        // Work in the space of the head's parent so yaw is relative to the base
-        Transform yawParent = headPivot.parent != null ? headPivot.parent : headPivot;
-        Vector3 toTargetWorld = (target.position + Vector3.up * 0.9f - headPivot.position);
-        if (toTargetWorld.sqrMagnitude < 0.0001f) return;
-
-        Vector3 toLocal = yawParent.InverseTransformDirection(toTargetWorld.normalized);
-
-        // Flatten direction on parent's up to get pure yaw
-        Vector3 flat = new Vector3(toLocal.x, 0f, toLocal.z);
-        if (flat.sqrMagnitude > 0.0001f){
-            flat.Normalize();
-            float yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
-            Quaternion targetYawLocal = Quaternion.Euler(0f, yaw, 0f);
-            Quaternion newYaw = Quaternion.RotateTowards(
-                headPivot.localRotation,
-                targetYawLocal,
-                yawSpeed * Time.deltaTime
-            );
-            headPivot.localRotation = newYaw;
-        }
-
-        // ---------- PITCH ----------
-        // Use the barrel's parent to compute pitch so we tilt around local X
-        Transform pitchParent = barrelPivot.parent != null ? barrelPivot.parent : barrelPivot;
-        Vector3 toTargetWorldPitch = (target.position + Vector3.up * 0.9f - barrelPivot.position);
-        if (toTargetWorldPitch.sqrMagnitude < 0.0001f) return;
-
-        Vector3 toLocalPitch = pitchParent.InverseTransformDirection(toTargetWorldPitch.normalized);
-        // Pitch is angle between local forward and target direction around local X
-        float pitch = Mathf.Asin(Mathf.Clamp(-toLocalPitch.y, -1f, 1f)) * Mathf.Rad2Deg;
-        pitch = Mathf.Clamp(pitch, pitchClamp.x, pitchClamp.y);
-
-        Quaternion targetPitchLocal = Quaternion.Euler(pitch, 0f, 0f);
-        Quaternion newPitch = Quaternion.RotateTowards(
-            barrelPivot.localRotation,
-            targetPitchLocal,
-            pitchSpeed * Time.deltaTime
-        );
-        barrelPivot.localRotation = newPitch;
-    }
-
-
-    bool InFireRange(){
-        // consider both muzzles if available, otherwise fallback to single muzzle
-        if (muzzle2 == null) return Vector3.Distance(target.position, muzzle.position) <= maxFireDist;
-        float d1 = Vector3.Distance(target.position, muzzle.position);
-        float d2 = Vector3.Distance(target.position, muzzle2.position);
-        return Mathf.Min(d1, d2) <= maxFireDist;
-    }
-
-    void TryFire(){
-        if (Time.time < nextFire) return;
-        nextFire = Time.time + 1f/fireRate;
-
-        // Fire from muzzle 1
-        FireFromMuzzle(muzzle, tracer, bulletSpreadDeg);
-        // If second muzzle exists, fire from it as well (both fire once each per cadence)
-        if (muzzle2 != null){
-            FireFromMuzzle(muzzle2, tracer2, bulletSpreadDeg);
+        else
+        {
+            SetState(TurretState.Scanning);
         }
     }
 
-    // Fires a single ray from the given muzzle with given spread in degrees
-    void FireFromMuzzle(Transform muzz, LineRenderer tr, float spreadDeg){
-        if (muzz == null) return;
-        bool held = grabbable != null && grabbable.IsGrabbed;
+    private bool IsTippedOver()
+    {
+        // Angle between turret "up" and world up
+        float angle = Vector3.Angle(transform.up, Vector3.up);
+        return angle > tippedAngle;
+    }
 
-        Vector3 dir;
-        if (held){
-            // when held by the gravity gun, always shoot straight forward
-            dir = muzz.forward;
-        } else if (target != null){
-            dir = Vector3.Normalize(target.position - muzz.position);
-        } else {
-            dir = muzz.forward;
-        }
-        // apply random spread
-        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), muzz.up) * dir;
-        dir = Quaternion.AngleAxis(Random.Range(-spreadDeg, spreadDeg), muzz.right) * dir;
+    private void DoVisionAndShoot(Vector3 origin, Vector3 direction, bool isPickedUp)
+    {
+        RaycastHit hit;
+        Vector3 end = origin + direction * viewDistance;
 
-        // apply recoil: impulse opposite to shot direction
-        if (_rb != null && !_rb.isKinematic){
-            // use the muzzle's forward as the canonical shot direction for recoil so the turret is pushed backward
-            Vector3 recoilDir = -muzz.forward;
-            if (useForceAtPosition) _rb.AddForceAtPosition(recoilDir.normalized * recoilForce, muzz.position, ForceMode.Impulse);
-            else _rb.AddForce(recoilDir.normalized * recoilForce, ForceMode.Impulse);
-            if (debugLogs) Debug.Log($"Applying recoil: dir={recoilDir.normalized}, force={recoilForce}", this);
-        }
-
-        if (Physics.Raycast(muzz.position, dir, out var hit, maxFireDist, sightMask, QueryTriggerInteraction.Ignore)){
-            if (tr){
-                ShowTracer(tr, muzz.position, hit.point);
-            }
-
-            var dmg = hit.collider.GetComponentInParent<IDamageable>();
-            if (dmg != null) dmg.ApplyDamage(bulletDamage, hit.point, hit.normal);
-        } else {
-            if (tr){
-                ShowTracer(tr, muzz.position, muzz.position + dir * maxFireDist);
+        if (Physics.Raycast(origin, direction, out hit, viewDistance, visionMask, QueryTriggerInteraction.Ignore))
+        {
+            end = hit.point;
+            if (isPickedUp || hit.collider.CompareTag("Player"))
+            {
+                TryShoot(direction);
             }
         }
+
+        // Draw the "vision" line
+        _line.SetPosition(0, origin);
+        _line.SetPosition(1, end);
     }
 
-    void ShowTracer(LineRenderer tr, Vector3 start, Vector3 end){
-        if (!tr) return;
-        tr.enabled = true;
-        tr.positionCount = 2;
-        tr.SetPosition(0, start);
-        tr.SetPosition(1, end);
-        // hide after short time
-        StartCoroutine(HideTracerAfter(tr, 0.03f));
-    }
+    private void TryShoot(Vector3 direction)
+    {
+        _fireTimer += Time.deltaTime;
+        if (_fireTimer < 1f / fireRate) return;
+        _fireTimer = 0f;
 
-    IEnumerator HideTracerAfter(LineRenderer tr, float delay){
-        yield return new WaitForSeconds(delay);
-        if (tr) tr.enabled = false;
-    }
+        _shotThisFrame = true;
 
-    bool IsTipped(){
-        // if turret up deviates a lot from world up, it falls/gets disabled
-        // broaden the check to include head/barrel orientation in case the root transform isn't the one tipping
-        float baseAngle = Vector3.Angle(transform.up, _startUp);
-        float headAngle = headPivot ? Vector3.Angle(headPivot.up, Vector3.up) : 0f;
-        float barrelAngle = barrelPivot ? Vector3.Angle(barrelPivot.up, Vector3.up) : 0f;
-        // if any significant part is tipped beyond threshold, consider it tipped
-        if (baseAngle > tipDisableAngle || headAngle > tipDisableAngle * 1.1f || barrelAngle > tipDisableAngle * 1.1f) {
-            if (debugLogs) Debug.Log($"Turret tipping detected by angle: base={baseAngle:F1}, head={headAngle:F1}, barrel={barrelAngle:F1}", this);
-            return true;
-        }
-        // also if the root has dropped significantly from its start height (fell over)
-        if (transform.position.y < _startY - tipHeightDrop){
-            if (debugLogs) Debug.Log($"Turret tipping detected by drop: startY={_startY:F2}, now={transform.position.y:F2}", this);
-            return true;
-        }
-        // or if the rigidbody is spinning violently
-        if (_rb != null && _rb.angularVelocity.sqrMagnitude > tipAngularVelocity * tipAngularVelocity){
-            if (debugLogs) Debug.Log($"Turret tipping detected by angular velocity: { _rb.angularVelocity.magnitude:F2}", this);
-            return true;
-        }
-        return false;
-    }
-
-    public void ApplyDamage(float dmg, Vector3 p, Vector3 n){
-        _rb.AddForceAtPosition(-n * dmg/2,p, ForceMode.VelocityChange);
-        if (state == State.Dead) return;
-        health -= dmg;
-        if (health <= 0f){ Die(); }
-        else if (state == State.Sleep) SetState(State.Search);
-    }
-
-    void SetState(State s){
-        if (state == s) return;
-
-        // exiting Disabled should stop panic
-        if (state == State.Disabled && panicCoroutine != null){
-            StopCoroutine(panicCoroutine);
-            panicCoroutine = null;
-        }
-
-        if (debugLogs) Debug.Log($"Turret state {state} -> {s}", this);
-        state = s;
-        switch(s){
-            case State.Sleep:
-            case State.Dead:
-                if (tracer != null) tracer.enabled = false;
-                if (tracer2 != null) tracer2.enabled = false;
-                // fade out emission if applicable
-                if (_matInstance != null && sleepFadeDuration > 0f){
-                    if (_emissionCoroutine != null) StopCoroutine(_emissionCoroutine);
-                    _emissionCoroutine = StartCoroutine(FadeEmission(0f, sleepFadeDuration));
-                }
-                break;
-            case State.Disabled:
-                // ensure we only trip once
-                if (_tripped) break;
-                _tripped = true;
-                // start panic firing for a short duration when tipped
-                if (tracer != null) tracer.enabled = false;
-                if (tracer2 != null) tracer2.enabled = false;
-                if (panicCoroutine != null) StopCoroutine(panicCoroutine);
-                if (debugLogs) Debug.Log("Turret entering Disabled: starting panic fire", this);
-                panicCoroutine = StartCoroutine(PanicFireRoutine());
-                break;
-        }
-
-        // If we're not sleeping and we have an emissive material, fade emission back up to the configured intensity
-        if (state != State.Sleep && _matInstance != null){
-            float fadeDur = Mathf.Max(0.05f, sleepFadeDuration);
-            if (_emissionCoroutine != null) StopCoroutine(_emissionCoroutine);
-            _emissionCoroutine = StartCoroutine(FadeEmission(emissionIntensity, fadeDur));
-        }
-    }
-
-    IEnumerator FadeEmission(float targetIntensity, float duration){
-        float startIntensity = _currentEmission;
-        float t = 0f;
-        while (t < duration){
-            t += Time.deltaTime;
-            float lerpT = Mathf.Clamp01(t / duration);
-            // smoothstep for easing
-            lerpT = lerpT * lerpT * (3f - 2f * lerpT);
-            _currentEmission = Mathf.Lerp(startIntensity, targetIntensity, lerpT);
-            _matInstance.SetColor("_EmissionColor", emissionColor * _currentEmission);
-            yield return null;
-        }
-        _currentEmission = targetIntensity;
-        _matInstance.SetColor("_EmissionColor", emissionColor * _currentEmission);
-        _emissionCoroutine = null;
-    }
-
-    IEnumerator PanicFireRoutine(){
-        float end = Time.time + panicDuration;
-        while (Time.time < end){
-            // pick a random muzzle to fire (or both randomly)
-            if (muzzle2 != null){
-                // randomly choose firing pattern: 0 = muzzle1, 1 = muzzle2, 2 = both
-                int pattern = Random.Range(0, 3);
-                if (pattern == 0) FirePanicFrom(muzzle, tracer);
-                else if (pattern == 1) FirePanicFrom(muzzle2, tracer2);
-                else { FirePanicFrom(muzzle, tracer); FirePanicFrom(muzzle2, tracer2); }
-            } else {
-                FirePanicFrom(muzzle, tracer);
+        // Simple ray-based shooting.
+        RaycastHit hit;
+        if (Physics.Raycast(firePoint.position, direction, out hit, viewDistance, visionMask, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.collider.TryGetComponent<IDamageable>(out var damageable))
+            {
+                damageable.ApplyDamage(10f, hit.point, direction);
             }
-
-            // random small delay but biased by fireRate so it doesn't go absurdly fast
-            float baseDelay = 1f / Mathf.Max(1f, fireRate);
-            float delay = Random.Range(0.02f, baseDelay);
-            yield return new WaitForSeconds(delay);
-        }
-        // ensure tracers are hidden after panic
-        if (tracer) tracer.enabled = false;
-        if (tracer2) tracer2.enabled = false;
-        panicCoroutine = null;
-        // after panic completes, disable the turret entirely
-        if (debugLogs) Debug.Log("Panic complete: disabling turret", this);
-        SetState(State.Sleep);
-    }
-
-    void FirePanicFrom(Transform muzz, LineRenderer tr){
-        if (muzz == null) return;
-        Vector3 dir = muzz.forward;
-
-        float panicSpread = bulletSpreadDeg * extraSpreadMultiplier;
-        dir = Quaternion.AngleAxis(Random.Range(-panicSpread, panicSpread), headPivot.up) * dir;
-        dir = Quaternion.AngleAxis(Random.Range(-panicSpread, panicSpread), barrelPivot.right) * dir;
-
-        // apply recoil during panic as well
-        if (_rb != null && !_rb.isKinematic){
-            // use the muzzle's forward as the canonical shot direction for recoil so the turret is pushed backward
-            Vector3 recoilDir = -muzz.forward;
-            if (useForceAtPosition) _rb.AddForceAtPosition(recoilDir.normalized * recoilForce, muzz.position, ForceMode.Impulse);
-            else _rb.AddForce(recoilDir.normalized * recoilForce, ForceMode.Impulse);
-            if (debugLogs) Debug.Log($"Applying panic recoil: dir={recoilDir.normalized}, force={recoilForce}", this);
         }
 
-        if (Physics.Raycast(muzz.position, dir, out var hit, maxFireDist, sightMask, QueryTriggerInteraction.Ignore)){
-            if (tr) ShowTracer(tr, muzz.position, hit.point);
-            var dmg = hit.collider.GetComponentInParent<IDamageable>();
-            if (dmg != null) dmg.ApplyDamage(bulletDamage, hit.point, hit.normal);
-        } else {
-            if (tr) ShowTracer(tr, muzz.position, muzz.position + dir * maxFireDist);
+        // Play shooting sound (per shot)
+        if (shootSfx != null)
+            AudioSource.PlayClipAtPoint(shootSfx, firePoint.position);
+    }
+
+    private void PanicAndDisable()
+    {
+        if (_isDisabled) return;
+
+        _isDisabled = true;
+        _line.enabled = false;
+        SetState(TurretState.PanicDisabled);
+    }
+
+    public void ForceDisable()
+    {
+        PanicAndDisable();
+    }
+
+    public void ApplyDamage(float dmg, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        // Knockback
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null)
+            rb.AddForceAtPosition(-hitNormal, hitPoint, ForceMode.Impulse);
+
+        // Play damage sound once per hit
+        if (damageSfx != null && _audio != null)
+            _audio.PlayOneShot(damageSfx);
+
+        // Disable / panic
+        PanicAndDisable();
+    }
+
+
+    // -----------------------
+    // State + one-shot audio
+    // -----------------------
+
+    private void SetState(TurretState newState)
+    {
+        if (_state == newState) return; // no change -> no sound
+
+        _state = newState;
+        PlayStateSfx(newState);
+    }
+
+    private void PlayStateSfx(TurretState state)
+    {
+        if (_audio == null) return;
+
+        AudioClip clip = null;
+
+        switch (state)
+        {
+            case TurretState.Idle:
+                clip = idleStateSfx;
+                break;
+            case TurretState.Scanning:
+                clip = scanningStateSfx;
+                break;
+            case TurretState.Firing:
+                clip = firingStateSfx;
+                break;
+            case TurretState.PickedUpFiring:
+                clip = pickedUpStateSfx;
+                break;
+            case TurretState.PanicDisabled:
+                clip = panicSfx;
+                break;
         }
-    }
 
-    void Die(){
-        SetState(State.Dead);
-        if (tracer != null) tracer.enabled = false;
-        if (tracer2 != null) tracer2.enabled = false;
+        if (clip != null)
+            _audio.PlayOneShot(clip);
     }
-
 }

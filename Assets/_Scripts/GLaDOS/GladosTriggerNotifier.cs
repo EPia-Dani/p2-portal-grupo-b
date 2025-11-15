@@ -21,9 +21,9 @@ namespace _Scripts.GLaDOS
         private void OnTriggerEnter(Collider other)
         {
             if (_notified) return;
-            _notified = true;
             if (other.CompareTag("Player"))
             {
+                _notified = true;
                 NotifyGlados();
             }
         }

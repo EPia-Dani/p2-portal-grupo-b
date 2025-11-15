@@ -12,12 +12,22 @@ public class GravityGun : MonoBehaviour
     [SerializeField] private LayerMask portalScreenMask;
     [SerializeField] private LayerMask grabbableMask;
     
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;   // assign in inspector
+    [SerializeField] private AudioClip pickupSfx;
+    
     public bool IsGrabbingObject => _grabbedObject != null;
 
     private IGrabbable _grabbedObject;
     
     [SerializeField] private bool drawHoldRayGizmos = true;
     [SerializeField] private float gizmoSphereRadius = 0.08f;
+
+    private void Awake()
+    {
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+    }
 
     public void OnInteract(InputAction.CallbackContext context)
     {
@@ -63,9 +73,13 @@ public class GravityGun : MonoBehaviour
             {
                 _grabbedObject = grabbable;
                 _grabbedObject?.OnGrab(this);
+                
+                if (pickupSfx != null && audioSource != null)
+                    audioSource.PlayOneShot(pickupSfx);
             }
         }
     }
+
 
     public void Release()
     {

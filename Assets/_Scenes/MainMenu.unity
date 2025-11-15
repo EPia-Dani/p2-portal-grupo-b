@@ -41913,6 +41913,21 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4387061646475312653, guid: e96c88a6638c2be43819d43c06e47265,
         type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.9533136
+      objectReference: {fileID: 0}
+    - target: {fileID: 4387061646475312653, guid: e96c88a6638c2be43819d43c06e47265,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.9533136
+      objectReference: {fileID: 0}
+    - target: {fileID: 4387061646475312653, guid: e96c88a6638c2be43819d43c06e47265,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.85113746
+      objectReference: {fileID: 0}
+    - target: {fileID: 4387061646475312653, guid: e96c88a6638c2be43819d43c06e47265,
+        type: 3}
       propertyPath: m_LocalPosition.x
       value: 20
       objectReference: {fileID: 0}
@@ -42848,6 +42863,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   minSpeed: 1
   damagePerKg: 2
+  pickupSound: {fileID: 0}
 --- !u!1 &7517599347884586813
 GameObject:
   m_ObjectHideFlags: 0
@@ -43416,6 +43432,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   minSpeed: 1
   damagePerKg: 2
+  pickupSound: {fileID: 0}
 --- !u!114 &9111881151596631072
 MonoBehaviour:
   m_ObjectHideFlags: 0

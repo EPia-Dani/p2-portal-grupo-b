@@ -157,7 +157,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   doorAnimator: {fileID: 6811385069946742220}
-  audioClip: {fileID: 0}
+  audioClip: {fileID: 8300000, guid: 46c1e70467a197348bd00a56702f90c4, type: 3}
   openDuration: 0.5
 --- !u!95 &6811385069946742220
 Animator:

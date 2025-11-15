@@ -28,7 +28,6 @@ public abstract class PortalableBase : MonoBehaviour, IPortalable
         this.outPortal = outPortal;
         
         if (this.inPortal?.WallCollider) Physics.IgnoreCollision(GetMainCollider(), this.inPortal.WallCollider, true);
-        if (this.outPortal?.WallCollider) Physics.IgnoreCollision(GetMainCollider(), this.outPortal.WallCollider, true);
         if (this.inPortal?.PortalCollider)  this.inPortal.PortalCollider.SetActive(true);
         if (this.outPortal?.PortalCollider) this.outPortal.PortalCollider.SetActive(true);
 
