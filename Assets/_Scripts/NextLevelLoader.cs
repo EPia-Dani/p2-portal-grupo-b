@@ -6,6 +6,8 @@ public class NextLevelLoader : MonoBehaviour
     [SerializeField] private string nextLevelName;
     private Coroutine loadCoroutine;
     private Animator animator;
+    [SerializeField]
+    private AudioClip doorCloseSfx;
     
     private void Awake()
     {
@@ -28,6 +30,10 @@ public class NextLevelLoader : MonoBehaviour
         if (animator != null)
         {
             animator.SetTrigger("close");
+        }
+        if (doorCloseSfx != null)
+        {
+            AudioSource.PlayClipAtPoint(doorCloseSfx, transform.position);
         }
         // Optional: Add fade-out or loading screen here
         yield return new WaitForSeconds(3f); // Simulate loading delay

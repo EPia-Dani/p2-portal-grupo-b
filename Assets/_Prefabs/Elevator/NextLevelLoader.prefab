@@ -92,6 +92,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   nextLevelName: TestChamber2
+  doorCloseSfx: {fileID: 8300000, guid: 46c1e70467a197348bd00a56702f90c4, type: 3}
 --- !u!1 &2023109342378011186
 GameObject:
   m_ObjectHideFlags: 0

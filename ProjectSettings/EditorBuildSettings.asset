@@ -29,6 +29,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Scenes/TestChamber7.unity
     guid: 1588340f3e40ca1468e234fd2628af33
+  - enabled: 1
+    path: Assets/_Scenes/Ending.unity
+    guid: 1a604aee67868f446ac8eea195a1d89b
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b,
       type: 3}
