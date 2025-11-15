@@ -1,0 +1,134 @@
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using RenderPipeline = UnityEngine.Rendering.RenderPipelineManager;
+
+public class PortalCamera : MonoBehaviour
+{
+    [SerializeField]
+    private Portal[] portals = new Portal[2];
+
+    [SerializeField]
+    private Camera portalCamera;
+
+    [SerializeField]
+    private int iterations = 7;
+    
+    [SerializeField]
+    private LayerMask[] layerMask = new LayerMask[2];
+
+    private RenderTexture _tempTexture1;
+    private RenderTexture _tempTexture2;
+
+    private void Awake()
+    {
+        _tempTexture1 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture1.depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt;
+        _tempTexture1.useMipMap = false;
+        _tempTexture1.autoGenerateMips = false;
+        _tempTexture2 = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        _tempTexture2.depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt;
+        _tempTexture2.useMipMap = false;
+        _tempTexture2.autoGenerateMips = false;
+        portalCamera.targetTexture = _tempTexture1;
+        portalCamera.clearFlags = CameraClearFlags.SolidColor;
+    }
+
+    private void Start()
+    {
+        BindRT(portals[0], _tempTexture1);
+        BindRT(portals[1], _tempTexture2);
+    }
+
+    void BindRT(Portal p, RenderTexture rt)
+    {
+        if (!p || !p.Renderer) return;
+        var r = p.Renderer;
+        bool urp = r.sharedMaterial && r.sharedMaterial.HasProperty("_BaseMap");
+        string texName = urp ? "_BaseMap" : "_MainTex";
+
+        var mpb = new MaterialPropertyBlock();
+        r.GetPropertyBlock(mpb);
+        mpb.SetTexture(texName, rt);
+        r.SetPropertyBlock(mpb);
+    }
+
+    private void OnEnable()
+    {
+        RenderPipeline.beginCameraRendering += UpdateCamera;
+    }
+
+    private void OnDisable()
+    {
+        RenderPipeline.beginCameraRendering -= UpdateCamera;
+    }
+
+    void UpdateCamera(ScriptableRenderContext SRC, Camera camera)
+    {
+        if (!portals[0].IsPlaced || !portals[1].IsPlaced)
+        {
+            return;
+        }
+
+        if (portals[0].Renderer.isVisible)
+        {
+            portalCamera.targetTexture = _tempTexture1;
+            for (int i = iterations - 1; i >= 0; --i)
+            {
+                portalCamera.cullingMask = layerMask[0];
+                RenderCamera(portals[0], portals[1], i, SRC);
+            }
+        }
+
+        if(portals[1].Renderer.isVisible)
+        {
+            portalCamera.targetTexture = _tempTexture2;
+            for (int i = iterations - 1; i >= 0; --i)
+            {
+                portalCamera.cullingMask = layerMask[1];
+                RenderCamera(portals[1], portals[0], i, SRC);
+            }
+        }
+    }
+
+    private void RenderCamera(Portal inPortal, Portal outPortal, int iterationID, ScriptableRenderContext SRC)
+    {
+        
+        Transform inTransform = inPortal.transform;
+        Transform outTransform = outPortal.transform;
+
+        Transform cameraTransform = portalCamera.transform;
+        cameraTransform.position = transform.position;
+        cameraTransform.rotation = transform.rotation;
+
+        for(int i = 0; i <= iterationID; ++i)
+        {
+            // Position the camera behind the other portal.
+            Vector3 relativePos = inTransform.InverseTransformPoint(cameraTransform.position);
+            relativePos = Quaternion.Euler(0.0f, 180.0f, 0.0f) * relativePos;
+            cameraTransform.position = outTransform.TransformPoint(relativePos);
+
+            // Rotate the camera to look through the other portal.
+            Quaternion relativeRot = Quaternion.Inverse(inTransform.rotation) * cameraTransform.rotation;
+            relativeRot = Quaternion.Euler(0.0f, 180.0f, 0.0f) * relativeRot;
+            cameraTransform.rotation = outTransform.rotation * relativeRot;
+        }
+
+        // Set the camera's oblique view frustum.
+        Plane p = new Plane(-outTransform.forward, outTransform.position);
+        Vector4 clipPlaneWorldSpace = new Vector4(p.normal.x, p.normal.y, p.normal.z, p.distance);
+        Vector4 clipPlaneCameraSpace =
+            Matrix4x4.Transpose(Matrix4x4.Inverse(portalCamera.worldToCameraMatrix)) * clipPlaneWorldSpace;
+
+        var newMatrix = portalCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
+        portalCamera.projectionMatrix = newMatrix;
+
+        // Render the camera to its render target.
+        #pragma warning disable CS0618
+
+        UniversalRenderPipeline.RenderSingleCamera(SRC, portalCamera);
+        
+        #pragma warning restore CS0618
+        
+    }
+}
