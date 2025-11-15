@@ -174,10 +174,10 @@ public class Turret : MonoBehaviour, IDamageable
         // Knockback
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
-            rb.AddForceAtPosition(-hitNormal, hitPoint, ForceMode.Impulse);
+            rb.AddForceAtPosition(hitNormal, hitPoint, ForceMode.Impulse);
 
-        // Play damage sound once per hit
-        if (damageSfx != null && _audio != null)
+        
+        if (damageSfx != null && _audio != null && !_isDisabled)
             _audio.PlayOneShot(damageSfx);
 
         // Disable / panic

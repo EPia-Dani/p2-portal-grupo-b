@@ -455,7 +455,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   eye: {fileID: 7774049643572624998}
   firePoint: {fileID: 7774049643572624998}
-  viewDistance: 20
+  viewDistance: 50
   visionMask:
     serializedVersion: 2
     m_Bits: 4294967295

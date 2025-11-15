@@ -362,6 +362,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 310751157599721984}
+  - component: {fileID: 5413834646654055934}
+  - component: {fileID: 5172448370753484931}
   m_Layer: 0
   m_Name: Fizzler
   m_TagString: Untagged
@@ -386,6 +388,39 @@ Transform:
   - {fileID: 6253418877764794288}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &5413834646654055934
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2681808434392604312}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 2.710877, z: 3.5460424}
+  m_Center: {x: 0, y: 0.24796581, z: -0.07860279}
+--- !u!114 &5172448370753484931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2681808434392604312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ca3c42b35b80564585e7c300c376d51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5364909706560010762
 GameObject:
   m_ObjectHideFlags: 0

@@ -646,9 +646,9 @@ MonoBehaviour:
     m_ActionName: 'Player/Look[/Mouse/delta,/Pen/delta]'
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1067667375865340516}
-        m_TargetAssemblyTypeName: GravityGun, Assembly-CSharp
-        m_MethodName: OnPrimary
+      - m_Target: {fileID: 4922871141645490996}
+        m_TargetAssemblyTypeName: PortalPlacement, Assembly-CSharp
+        m_MethodName: OnFireBlue
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -658,9 +658,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4922871141645490996}
-        m_TargetAssemblyTypeName: PortalPlacement, Assembly-CSharp
-        m_MethodName: OnFireBlue
+      - m_Target: {fileID: 1067667375865340516}
+        m_TargetAssemblyTypeName: GravityGun, Assembly-CSharp
+        m_MethodName: OnPrimary
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
